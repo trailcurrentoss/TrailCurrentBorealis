@@ -16,7 +16,8 @@
 #define RGB_LED_PIN 21
 
 void setLed(uint8_t r, uint8_t g, uint8_t b) {
-    neopixelWrite(RGB_LED_PIN, r, g, b);
+    // WS2812 on this board uses GRB order; neopixelWrite sends bytes as-is
+    neopixelWrite(RGB_LED_PIN, g, r, b);
 }
 
 #define CAN_ID_OTA_TRIGGER  0x00
@@ -60,17 +61,19 @@ Adafruit_SGP30 sgp;
 unsigned long lastReadTime = 0;
 const unsigned long READ_INTERVAL = 2000;
 
+// Cached at startup when MAC is readable (WiFi.macAddress() returns zeros later)
+String cachedHostName;
+
 void handleOtaTrigger(const uint8_t *data) {
     char updateForHostName[14];
-    String currentHostName = otaUpdate.getHostName();
 
     sprintf(updateForHostName, "esp32-%02X%02X%02X",
             data[0], data[1], data[2]);
 
     debugf("[OTA] Target: %s, This device: %s\n",
-           updateForHostName, currentHostName.c_str());
+           updateForHostName, cachedHostName.c_str());
 
-    if (currentHostName.equals(updateForHostName)) {
+    if (cachedHostName.equals(updateForHostName)) {
         debugln("[OTA] Hostname matched - entering OTA mode");
         setLed(0, 0, 40);  // Blue: OTA mode
         otaUpdate.waitForOta();
@@ -152,7 +155,8 @@ void setup() {
         debugln("[WiFi] No credentials in NVS - OTA disabled until provisioned via CAN");
     }
 
-    debugf("[OTA] Device hostname: %s\n", otaUpdate.getHostName().c_str());
+    cachedHostName = otaUpdate.getHostName();
+    debugf("[OTA] Device hostname: %s\n", cachedHostName.c_str());
 
     // Sensors
     dht.begin();
