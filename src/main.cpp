@@ -9,6 +9,7 @@
 
 #define DHT_PIN 2
 #define DHT_TYPE DHT22
+#define TEMP_OFFSET_C -2.78f
 #define I2C_SDA 5
 #define I2C_SCL 6
 #define CAN_TX GPIO_NUM_9
@@ -190,8 +191,8 @@ void loop() {
     lastReadTime = now;
 
     float humidity = dht.readHumidity();
-    float tempC = dht.readTemperature();
-    float tempF = dht.readTemperature(true);
+    float tempC = dht.readTemperature() + TEMP_OFFSET_C;
+    float tempF = tempC * 9.0f / 5.0f + 32.0f;
 
     debugln("--- Sensor Readings ---");
 
