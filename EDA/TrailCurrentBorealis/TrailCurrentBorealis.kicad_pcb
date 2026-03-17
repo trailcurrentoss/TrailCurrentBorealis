@@ -37,6 +37,7 @@
 		(pad_to_mask_clearance 0)
 		(allow_soldermask_bridges_in_footprints no)
 		(tenting front back)
+		(grid_origin 87.709 125.6)
 		(pcbplotparams
 			(layerselection 0x00000000_00000000_55555555_5755f5ff)
 			(plot_on_all_layers_selection 0x00000000_00000000_00000000_00000000)
@@ -2468,7 +2469,7 @@
 			(net 10 "+12V")
 			(pinfunction "VIN+")
 			(pintype "power_in")
-			(uuid "1e344df3-2859-43df-807a-df9d0b6038e4")
+			(uuid "0b7c0d2e-bbe1-4b8e-909d-328a558eb36d")
 		)
 		(pad "2" smd rect
 			(at -15 -4.46 180)
@@ -2488,7 +2489,7 @@
 			(net 10 "+12V")
 			(pinfunction "VIN+")
 			(pintype "passive")
-			(uuid "048834b4-01dd-4a49-81d5-c48816746d82")
+			(uuid "38b2be3f-1ed9-4769-9860-f3962186597b")
 		)
 		(pad "3" smd rect
 			(at -15 4.46 180)
@@ -2508,7 +2509,7 @@
 			(net 1 "GND")
 			(pinfunction "GND")
 			(pintype "power_in")
-			(uuid "e5a9ec5f-7ca7-4f55-8dc0-8002ddd53634")
+			(uuid "24029cb8-0fa2-4c55-9394-48679642fc76")
 		)
 		(pad "4" smd rect
 			(at -15 7 180)
@@ -2528,7 +2529,7 @@
 			(net 1 "GND")
 			(pinfunction "GND")
 			(pintype "passive")
-			(uuid "47695a62-36d1-473b-ab79-bd3c109eed47")
+			(uuid "4c6c8f72-8b42-42cd-b8cd-139c8edd0806")
 		)
 		(pad "6" thru_hole oval
 			(at 13.5 7 180)
@@ -2548,7 +2549,7 @@
 			(net 1 "GND")
 			(pinfunction "GND")
 			(pintype "passive")
-			(uuid "a595c291-1e55-4608-8f99-8cf38855767d")
+			(uuid "a799e9a8-a29f-4ed7-a471-866bb7babea9")
 		)
 		(pad "7" thru_hole oval
 			(at 13.5 4.46 180)
@@ -2568,7 +2569,7 @@
 			(net 1 "GND")
 			(pinfunction "GND")
 			(pintype "passive")
-			(uuid "485ece14-c9ba-439f-b733-77d2ff4bcc61")
+			(uuid "79ca3818-a887-4b92-b72e-31e3c1d950d6")
 		)
 		(pad "8" thru_hole oval
 			(at 13.5 -4.46 180)
@@ -2588,7 +2589,7 @@
 			(net 15 "+5V")
 			(pinfunction "VOUT+")
 			(pintype "power_out")
-			(uuid "ac439782-5c63-45f3-b722-3a333c2ba9a9")
+			(uuid "67b6cfb2-4c7a-41bf-b212-2eaa30aa21d0")
 		)
 		(pad "9" thru_hole oval
 			(at 13.5 -7 180)
@@ -2608,7 +2609,7 @@
 			(net 15 "+5V")
 			(pinfunction "VOUT+")
 			(pintype "passive")
-			(uuid "aa203d51-956d-443d-b371-663dd34f65fc")
+			(uuid "c1e63b97-553a-4dab-81ef-d65238388511")
 		)
 		(embedded_fonts no)
 		(model "${TRAILCURRENT_3DMODEL_DIR}/modules/Mini560.step"
