@@ -90,9 +90,6 @@ void onCanRx(const twai_message_t &msg) {
     else if (msg.identifier == CAN_ID_WIFI_CONFIG && msg.data_length_code >= 1) {
         wifiConfig::handleCanMessage(msg.data, msg.data_length_code);
     }
-    else {
-        debugf("CAN RX: ID=0x%03X DLC=%d\n", msg.identifier, msg.data_length_code);
-    }
 }
 
 void onCanTx(bool success) {
@@ -253,9 +250,12 @@ void loop() {
             exp(17.62f * tempC / (243.12f + tempC)) / (273.15f + tempC);
         uint16_t ah_scaled = (uint16_t)(absHumidity * 256.0f);
         sgp.setHumidity(ah_scaled);
-
-        sendCanMessage(tempC, humidity, tvoc, eco2);
     }
+
+    // Always send CAN message; use 0 for failed sensor readings
+    float canTempC = isnan(tempC) ? 0.0f : tempC;
+    float canHumidity = isnan(humidity) ? 0.0f : humidity;
+    sendCanMessage(canTempC, canHumidity, tvoc, eco2);
 
     debugln("");
 }
