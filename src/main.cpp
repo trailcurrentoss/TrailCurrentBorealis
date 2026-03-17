@@ -1,15 +1,12 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <DHT.h>
+#include <Adafruit_SHT31.h>
 #include <Adafruit_SGP30.h>
 #include <TwaiTaskBased.h>
 #include <OtaUpdate.h>
 #include <debug.h>
 #include "wifiConfig.h"
 
-#define DHT_PIN 2
-#define DHT_TYPE DHT22
-#define TEMP_OFFSET_C -2.78f
 #define I2C_SDA 5
 #define I2C_SCL 6
 #define CAN_TX GPIO_NUM_9
@@ -56,7 +53,7 @@ char runtimePassword[64] = {0};
 // OTA update handler (3-minute timeout)
 OtaUpdate otaUpdate(180000, runtimeSsid, runtimePassword);
 
-DHT dht(DHT_PIN, DHT_TYPE);
+Adafruit_SHT31 sht31 = Adafruit_SHT31();
 Adafruit_SGP30 sgp;
 
 unsigned long lastReadTime = 0;
@@ -160,10 +157,14 @@ void setup() {
     debugf("[OTA] Device hostname: %s\n", cachedHostName.c_str());
 
     // Sensors
-    dht.begin();
-
     Wire.begin(I2C_SDA, I2C_SCL);
     i2cScan();
+
+    if (!sht31.begin(0x44)) {
+        debugln("ERROR: SHT31-D sensor not found");
+    } else {
+        debugln("SHT31-D sensor initialized");
+    }
 
     if (!sgp.begin(&Wire)) {
         debugln("ERROR: SGP30 sensor not found");
@@ -174,7 +175,7 @@ void setup() {
     // CAN bus
     TwaiTaskBased::onReceive(onCanRx);
     TwaiTaskBased::onTransmit(onCanTx);
-    if (TwaiTaskBased::begin(CAN_TX, CAN_RX, 500000)) {
+    if (TwaiTaskBased::begin(CAN_TX, CAN_RX, 500000, TWAI_MODE_NO_ACK)) {
         debugln("[CAN] Bus initialized");
     } else {
         debugln("[CAN] ERROR: Bus init failed");
@@ -190,16 +191,16 @@ void loop() {
     if (now - lastReadTime < READ_INTERVAL) return;
     lastReadTime = now;
 
-    float humidity = dht.readHumidity();
-    float tempC = dht.readTemperature() + TEMP_OFFSET_C;
+    float tempC = sht31.readTemperature();
+    float humidity = sht31.readHumidity();
     float tempF = tempC * 9.0f / 5.0f + 32.0f;
 
     debugln("--- Sensor Readings ---");
 
     if (isnan(humidity) || isnan(tempC)) {
-        debugln("DHT22: read failed");
+        debugln("SHT31-D: read failed");
     } else {
-        debugf("DHT22: %.1fC / %.1fF, Humidity: %.1f%%\n", tempC, tempF, humidity);
+        debugf("SHT31-D: %.1fC / %.1fF, Humidity: %.1f%%\n", tempC, tempF, humidity);
     }
 
     uint16_t tvoc = 0;
@@ -225,7 +226,7 @@ void loop() {
         debugf("SGP30 Raw: H2 %d, Ethanol %d\n", sgp.rawH2, sgp.rawEthanol);
     }
 
-    // Set humidity compensation on SGP30 if DHT22 reading is valid
+    // Set humidity compensation on SGP30 if SHT31-D reading is valid
     if (!isnan(humidity) && !isnan(tempC)) {
         float absHumidity = 216.7f * (humidity / 100.0f) * 6.112f *
             exp(17.62f * tempC / (243.12f + tempC)) / (273.15f + tempC);

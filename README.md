@@ -5,7 +5,7 @@ An ESP32-S3-based environmental sensor node that monitors temperature, humidity,
 ## Hardware
 
 - **MCU:** [Waveshare ESP32-S3-Zero](https://www.waveshare.com/product/arduino/boards-kits/esp32-s3/esp32-s3-zero.htm) (CPU clocked at 80 MHz for reduced power consumption)
-- **Temperature/Humidity:** DHT22 sensor
+- **Temperature/Humidity:** SHT31-D sensor (I2C)
 - **Air Quality:** SGP30 TVOC and eCO2 sensor (I2C)
 - **CAN Transceiver:** SN65HVD230DR (3.3V, 500 kbps)
 - **Status LED:** Onboard WS2812 RGB LED (GPIO 21)
@@ -14,17 +14,14 @@ An ESP32-S3-based environmental sensor node that monitors temperature, humidity,
 
 | Pin | GPIO | Function |
 |-----|-------|----------|
-| 5 | GPIO2 | DHT22 data |
-| 8 | GPIO5 | I2C SDA (SGP30) |
-| 9 | GPIO6 | I2C SCL (SGP30) |
+| 8 | GPIO5 | I2C SDA (SGP30, SHT31-D) |
+| 9 | GPIO6 | I2C SCL (SGP30, SHT31-D) |
 | 12 | GPIO9 | CAN TX |
 | 13 | GPIO10 | CAN RX |
 | - | GPIO21 | Onboard RGB LED |
 
 ### Circuit Notes
 
-- **R2 (4.7K):** Pull-up resistor on the DHT22 data line to 3.3V
-- **C1 (100nF):** Decoupling capacitor on the DHT22 power supply
 - KiCad schematic and PCB files are in the `EDA/` directory
 
 ## Building
@@ -58,7 +55,7 @@ All communication uses a 500 kbps CAN bus. The device transmits sensor data and 
 | 4-5 | TVOC in ppb (big-endian) |
 | 6-7 | eCO2 in ppm (big-endian) |
 
-Sensor data is transmitted every 2 seconds when both DHT22 and SGP30 readings are valid. The SGP30 receives humidity compensation from the DHT22 for improved accuracy.
+Sensor data is transmitted every 2 seconds when both SHT31-D and SGP30 readings are valid. The SGP30 receives humidity compensation from the SHT31-D for improved accuracy.
 
 ### OTA Trigger (RX)
 
@@ -135,8 +132,7 @@ The device hostname is printed to serial at boot (format: `esp32-XXYYZZ`).
 | [ESP32ArduinoDebugLibrary](https://github.com/trailcurrentoss/ESP32ArduinoDebugLibrary) | TrailCurrent |
 | [TwaiTaskBasedLibrary](https://github.com/trailcurrentoss/TwaiTaskBasedLibraryWROOM32) | TrailCurrent |
 | [OtaUpdateLibrary](https://github.com/trailcurrentoss/OtaUpdateLibraryWROOM32) | TrailCurrent |
-| [DHT sensor library](https://github.com/adafruit/DHT-sensor-library) | Adafruit |
-| [Adafruit Unified Sensor](https://github.com/adafruit/Adafruit_Sensor) | Adafruit |
+| [Adafruit SHT31 Library](https://github.com/adafruit/Adafruit_SHT31) | Adafruit |
 | [Adafruit SGP30 Sensor](https://github.com/adafruit/Adafruit_SGP30) | Adafruit |
 
 ## License

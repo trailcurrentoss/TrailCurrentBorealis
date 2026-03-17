@@ -5,316 +5,6 @@
 	(uuid "a969f767-e599-4132-b450-33d5b0e2f1fb")
 	(paper "A4")
 	(lib_symbols
-		(symbol "Connector_Generic:Conn_01x03"
-			(pin_names
-				(offset 1.016)
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "J"
-				(at 0 5.08 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Value" "Conn_01x03"
-				(at 0 -5.08 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "~"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_keywords" "connector"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "Connector*:*_1x??_*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "Conn_01x03_1_1"
-				(rectangle
-					(start -1.27 3.81)
-					(end 1.27 -3.81)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type background)
-					)
-				)
-				(rectangle
-					(start -1.27 2.667)
-					(end 0 2.413)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(rectangle
-					(start -1.27 0.127)
-					(end 0 -0.127)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(rectangle
-					(start -1.27 -2.413)
-					(end 0 -2.667)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(pin passive line
-					(at -5.08 2.54 0)
-					(length 3.81)
-					(name "Pin_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 0 0)
-					(length 3.81)
-					(name "Pin_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 -2.54 0)
-					(length 3.81)
-					(name "Pin_3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
-		(symbol "Device:C"
-			(pin_numbers
-				(hide yes)
-			)
-			(pin_names
-				(offset 0.254)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "C"
-				(at 0.635 2.54 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Value" "C"
-				(at 0.635 -2.54 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Footprint" ""
-				(at 0.9652 -3.81 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "~"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Unpolarized capacitor"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_keywords" "cap capacitor"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "C_*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "C_0_1"
-				(polyline
-					(pts
-						(xy -2.032 0.762) (xy 2.032 0.762)
-					)
-					(stroke
-						(width 0.508)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -2.032 -0.762) (xy 2.032 -0.762)
-					)
-					(stroke
-						(width 0.508)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "C_1_1"
-				(pin passive line
-					(at 0 3.81 270)
-					(length 2.794)
-					(name "~"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 0 -3.81 90)
-					(length 2.794)
-					(name "~"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "Device:R"
 			(pin_numbers
 				(hide yes)
@@ -1687,6 +1377,142 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "TrailCurrentSymbolLibrary:SHT31-D-TempHumidity"
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "U"
+				(at -1.27 8.89 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Value" "SHT31-D-TempHumidity"
+				(at -1.27 6.35 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Footprint" "TrailCurrentFootprints:SHT31-D-TempHumidity"
+				(at 0 -20 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "SHT31-D Temperature and Humidity Sensor Breakout Module, I2C interface"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "SHT31-D-TempHumidity_1_1"
+				(rectangle
+					(start -7.62 5.08)
+					(end 7.62 -5.08)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(pin power_in line
+					(at -10.16 2.54 0)
+					(length 2.54)
+					(name "VIN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -10.16 0 0)
+					(length 2.54)
+					(name "GND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 10.16 2.54 180)
+					(length 2.54)
+					(name "SCL"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 10.16 0 180)
+					(length 2.54)
+					(name "SDA"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "TrailCurrentSymbolLibrary:SN65HVD230DR"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -2703,12 +2529,6 @@
 		(uuid "eb8b458b-8470-46e7-ba82-59eea6b1ecab")
 	)
 	(junction
-		(at 110.49 92.71)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "0da7349b-d3da-4662-a7be-0a73d1f3b8d4")
-	)
-	(junction
 		(at 41.91 31.75)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2719,12 +2539,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "11f2d32c-e23b-4b2d-b4fb-9bdda89a1556")
-	)
-	(junction
-		(at 99.06 85.09)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "25c4e942-139b-40d3-8705-72c3f0284eb8")
 	)
 	(junction
 		(at 121.92 34.29)
@@ -2743,12 +2557,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "695886e1-3c67-4405-9d33-e10be11d089e")
-	)
-	(junction
-		(at 110.49 66.04)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "9493f8f1-4cb8-49bc-b00d-d9d88bfbe1bc")
 	)
 	(junction
 		(at 121.92 26.67)
@@ -2888,16 +2696,6 @@
 	)
 	(wire
 		(pts
-			(xy 110.49 95.25) (xy 110.49 92.71)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "176fa0d4-b4f0-4403-abe6-efb50485a6a0")
-	)
-	(wire
-		(pts
 			(xy 121.92 31.75) (xy 121.92 34.29)
 		)
 		(stroke
@@ -2948,36 +2746,6 @@
 	)
 	(wire
 		(pts
-			(xy 106.68 66.04) (xy 110.49 66.04)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "33016a23-49e1-4277-8ce2-b7ba1b67e734")
-	)
-	(wire
-		(pts
-			(xy 99.06 85.09) (xy 121.92 85.09)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "33d1a864-dba3-4eea-bcc6-8212faaa8e57")
-	)
-	(wire
-		(pts
-			(xy 110.49 92.71) (xy 115.57 92.71)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "340f3e45-4b75-4fe5-8fc0-047e0faf0cf5")
-	)
-	(wire
-		(pts
 			(xy 93.98 29.21) (xy 91.44 29.21)
 		)
 		(stroke
@@ -2998,16 +2766,6 @@
 	)
 	(wire
 		(pts
-			(xy 110.49 78.74) (xy 110.49 92.71)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3d17536f-8acc-4cee-9780-b73658ac8e4a")
-	)
-	(wire
-		(pts
 			(xy 30.48 40.64) (xy 30.48 38.1)
 		)
 		(stroke
@@ -3015,16 +2773,6 @@
 			(type default)
 		)
 		(uuid "3ff1d753-8eed-4110-a6bd-0f14b40db02e")
-	)
-	(wire
-		(pts
-			(xy 115.57 92.71) (xy 115.57 87.63)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "43f2c768-ad1b-4f38-9851-ebb05a3446b7")
 	)
 	(wire
 		(pts
@@ -3068,26 +2816,6 @@
 	)
 	(wire
 		(pts
-			(xy 114.3 82.55) (xy 121.92 82.55)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "68d99293-74f2-4434-bd3e-cc51d6cf6d14")
-	)
-	(wire
-		(pts
-			(xy 114.3 66.04) (xy 114.3 82.55)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9343a54a-78cc-45ad-9df9-5f2b458b0210")
-	)
-	(wire
-		(pts
 			(xy 88.9 34.29) (xy 91.44 34.29)
 		)
 		(stroke
@@ -3118,26 +2846,6 @@
 	)
 	(wire
 		(pts
-			(xy 110.49 66.04) (xy 110.49 71.12)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9ca22f89-dde7-4331-a78d-08dc1ba236ce")
-	)
-	(wire
-		(pts
-			(xy 110.49 66.04) (xy 114.3 66.04)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "a6d1930c-5e81-4a76-84fe-2f0ef20a1d92")
-	)
-	(wire
-		(pts
 			(xy 41.91 30.48) (xy 41.91 31.75)
 		)
 		(stroke
@@ -3145,16 +2853,6 @@
 			(type default)
 		)
 		(uuid "b9c9ef77-0131-453c-bb9b-7160c4362ab8")
-	)
-	(wire
-		(pts
-			(xy 115.57 87.63) (xy 121.92 87.63)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ba88a36d-67c2-4d55-8a69-320c4e965423")
 	)
 	(wire
 		(pts
@@ -3175,16 +2873,6 @@
 			(type default)
 		)
 		(uuid "d6dd2ee2-bca3-486d-9530-a7046eaedf61")
-	)
-	(wire
-		(pts
-			(xy 95.25 85.09) (xy 99.06 85.09)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "d7b1d414-cbd5-4f39-b47d-7314fde7f0d1")
 	)
 	(wire
 		(pts
@@ -3348,6 +3036,28 @@
 			)
 		)
 	)
+	(global_label "SDA"
+		(shape input)
+		(at 113.03 80.01 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "3071f030-734e-40eb-aeae-eb2c7e41377c")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 119.5833 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "CANH"
 		(shape input)
 		(at 57.15 76.2 0)
@@ -3414,24 +3124,24 @@
 			)
 		)
 	)
-	(global_label "DHT_READING"
+	(global_label "SCL"
 		(shape input)
-		(at 95.25 85.09 180)
+		(at 113.03 77.47 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right)
+			(justify left)
 		)
-		(uuid "b0ae6ba9-8556-422e-ad19-cc4c462071cc")
+		(uuid "7efb4102-180e-48f1-9c47-e573f660cf03")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 79.7462 85.09 0)
+			(at 119.5228 77.47 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 				(hide yes)
 			)
 		)
@@ -3656,144 +3366,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Connector_Generic:Conn_01x03")
-		(at 127 85.09 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "1360dcd5-14da-4453-9e49-205d2271ae69")
-		(property "Reference" "J1"
-			(at 125.73 79.248 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "DHT22"
-			(at 126.238 90.17 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Sensor:DHT22_Module"
-			(at 127 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 127 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"
-			(at 127 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "3"
-			(uuid "8ca010df-78a9-4924-acaa-5e8a499448d5")
-		)
-		(pin "1"
-			(uuid "09220f8c-2546-4671-8cba-ae6256c42b18")
-		)
-		(pin "2"
-			(uuid "8338a7a6-3ccd-4a30-98eb-997da4ec6983")
-		)
-		(instances
-			(project "TrailCurrentBorealis"
-				(path "/a969f767-e599-4132-b450-33d5b0e2f1fb"
-					(reference "J1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 110.49 95.25 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "1df2cfc5-4be4-47e1-826e-1e12ece61f01")
-		(property "Reference" "#PWR09"
-			(at 110.49 101.6 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 110.49 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 110.49 95.25 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 110.49 95.25 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 110.49 95.25 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "a2dc11ea-f562-42b9-91f0-990b132dd552")
-		)
-		(instances
-			(project "TrailCurrentBorealis"
-				(path "/a969f767-e599-4132-b450-33d5b0e2f1fb"
-					(reference "#PWR09")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:+12V")
 		(at 31.75 30.48 0)
 		(unit 1)
@@ -3854,6 +3426,73 @@
 			(project "TrailCurrentBorealis"
 				(path "/a969f767-e599-4132-b450-33d5b0e2f1fb"
 					(reference "#PWR011")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 92.71 80.01 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "27e3cfbc-67b5-42c6-99e3-0f33a8b9e386")
+		(property "Reference" "#PWR01"
+			(at 86.36 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 88.9 80.0099 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" ""
+			(at 92.71 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 92.71 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 92.71 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "fac040ff-a905-485f-a1f9-aa49a0edc88e")
+		)
+		(instances
+			(project "TrailCurrentBorealis"
+				(path "/a969f767-e599-4132-b450-33d5b0e2f1fb"
+					(reference "#PWR01")
 					(unit 1)
 				)
 			)
@@ -4349,6 +3988,80 @@
 		)
 	)
 	(symbol
+		(lib_id "TrailCurrentSymbolLibrary:SHT31-D-TempHumidity")
+		(at 102.87 80.01 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "479885ac-60a7-4b56-a286-490f5776f45c")
+		(property "Reference" "U4"
+			(at 102.87 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "SHT31-D-TempHumidity"
+			(at 102.87 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "TrailCurrentFootprints:SHT31-D-TempHumidity"
+			(at 102.87 100.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 102.87 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "SHT31-D Temperature and Humidity Sensor Breakout Module, I2C interface"
+			(at 102.87 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b300003d-ca74-4eaf-9149-a7a57c79ab36")
+		)
+		(pin "2"
+			(uuid "fae9c21e-8267-4aa4-b38a-db5f2cc81d26")
+		)
+		(pin "3"
+			(uuid "3f223047-f46a-4f1d-a106-33a430b65fa6")
+		)
+		(pin "4"
+			(uuid "cceed50e-78fd-4f80-a413-24de38c627ec")
+		)
+		(instances
+			(project ""
+				(path "/a969f767-e599-4132-b450-33d5b0e2f1fb"
+					(reference "U4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "TrailCurrentSymbolLibrary:Mini560")
 		(at 93.98 26.67 0)
 		(unit 1)
@@ -4542,72 +4255,6 @@
 			(project "TrailCurrentBorealis"
 				(path "/a969f767-e599-4132-b450-33d5b0e2f1fb"
 					(reference "#PWR02")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:+3.3V")
-		(at 99.06 77.47 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "68c00d25-7bb8-4aa4-86de-e971149bde9e")
-		(property "Reference" "#PWR010"
-			(at 99.06 81.28 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "+3.3V"
-			(at 99.06 72.39 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 99.06 77.47 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 99.06 77.47 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+3.3V\""
-			(at 99.06 77.47 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "1867a77d-5f9f-4143-9ef2-624edaefad2a")
-		)
-		(instances
-			(project "TrailCurrentBorealis"
-				(path "/a969f767-e599-4132-b450-33d5b0e2f1fb"
-					(reference "#PWR010")
 					(unit 1)
 				)
 			)
@@ -5039,75 +4686,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:C")
-		(at 110.49 74.93 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "89973918-a1c6-4281-8cc5-7f01d91c0984")
-		(property "Reference" "C1"
-			(at 107.188 72.136 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "100nF"
-			(at 104.14 76.962 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder"
-			(at 111.4552 78.74 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 110.49 74.93 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 110.49 74.93 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "2587ce8b-befd-4d4a-93eb-f30e2a022f73")
-		)
-		(pin "2"
-			(uuid "ea558463-ec2e-4d83-9601-49790a737e44")
-		)
-		(instances
-			(project "TrailCurrentBorealis"
-				(path "/a969f767-e599-4132-b450-33d5b0e2f1fb"
-					(reference "C1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:GND")
 		(at 152.4 92.71 270)
 		(unit 1)
@@ -5176,7 +4754,7 @@
 	)
 	(symbol
 		(lib_id "power:+3.3V")
-		(at 106.68 66.04 90)
+		(at 92.71 77.47 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -5185,7 +4763,7 @@
 		(fields_autoplaced yes)
 		(uuid "9856a1e8-55ba-4e02-8a72-ecdc39ad309e")
 		(property "Reference" "#PWR08"
-			(at 110.49 66.04 0)
+			(at 96.52 77.47 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5194,7 +4772,7 @@
 			)
 		)
 		(property "Value" "+3.3V"
-			(at 102.87 66.0399 90)
+			(at 88.9 77.4699 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5203,7 +4781,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 106.68 66.04 0)
+			(at 92.71 77.47 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5212,7 +4790,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 106.68 66.04 0)
+			(at 92.71 77.47 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5221,7 +4799,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3.3V\""
-			(at 106.68 66.04 0)
+			(at 92.71 77.47 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5236,76 +4814,6 @@
 			(project "TrailCurrentBorealis"
 				(path "/a969f767-e599-4132-b450-33d5b0e2f1fb"
 					(reference "#PWR08")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 99.06 81.28 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "b8389567-20cd-4181-9bf5-699845b9c5b7")
-		(property "Reference" "R2"
-			(at 101.6 80.0099 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "4.7K"
-			(at 101.6 82.5499 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_1206_3216Metric_Pad1.33x1.80mm_HandSolder"
-			(at 97.282 81.28 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 99.06 81.28 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 99.06 81.28 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "7ae20ee3-3b0d-49bb-b16d-3ccf436e15ec")
-		)
-		(pin "2"
-			(uuid "678d3bfd-5a70-4bc0-9269-4cb4af6c33d1")
-		)
-		(instances
-			(project "TrailCurrentBorealis"
-				(path "/a969f767-e599-4132-b450-33d5b0e2f1fb"
-					(reference "R2")
 					(unit 1)
 				)
 			)
