@@ -7,10 +7,10 @@
 #include <debug.h>
 #include "wifiConfig.h"
 
-#define I2C_SDA 6
-#define I2C_SCL 5
-#define CAN_TX GPIO_NUM_9
-#define CAN_RX GPIO_NUM_10
+#define I2C_SDA 5
+#define I2C_SCL 6
+#define CAN_TX GPIO_NUM_7
+#define CAN_RX GPIO_NUM_8
 #define RGB_LED_PIN 21
 
 void setLed(uint8_t r, uint8_t g, uint8_t b) {
