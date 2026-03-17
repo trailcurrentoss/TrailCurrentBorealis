@@ -7,8 +7,8 @@
 #include <debug.h>
 #include "wifiConfig.h"
 
-#define I2C_SDA 5
-#define I2C_SCL 6
+#define I2C_SDA 6
+#define I2C_SCL 5
 #define CAN_TX GPIO_NUM_9
 #define CAN_RX GPIO_NUM_10
 #define RGB_LED_PIN 21
@@ -101,6 +101,25 @@ void onCanTx(bool success) {
     }
 }
 
+// Recover CAN bus from bus-off state (e.g. when bus wasn't connected at boot)
+void canBusRecover() {
+    twai_status_info_t status;
+    if (twai_get_status_info(&status) != ESP_OK) return;
+
+    if (status.state == TWAI_STATE_BUS_OFF) {
+        debugln("[CAN] Bus-off detected, initiating recovery...");
+        if (twai_initiate_recovery() == ESP_OK) {
+            debugln("[CAN] Recovery initiated, waiting...");
+            delay(100);
+            if (twai_start() == ESP_OK) {
+                debugln("[CAN] Bus recovered and restarted");
+            } else {
+                debugln("[CAN] Bus restart failed after recovery");
+            }
+        }
+    }
+}
+
 void sendCanMessage(float tempC, float humidity, uint16_t tvoc, uint16_t eco2) {
     uint16_t humidityScaled = static_cast<uint16_t>(humidity * 100.0f);
     int tempCInt = static_cast<int>(tempC + 0.5f);
@@ -186,6 +205,8 @@ void setup() {
 
 void loop() {
     wifiConfig::checkTimeout();
+
+    canBusRecover();
 
     unsigned long now = millis();
     if (now - lastReadTime < READ_INTERVAL) return;

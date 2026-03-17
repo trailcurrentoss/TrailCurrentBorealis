@@ -14,8 +14,8 @@ An ESP32-S3-based environmental sensor node that monitors temperature, humidity,
 
 | Pin | GPIO | Function |
 |-----|-------|----------|
-| 8 | GPIO5 | I2C SDA (SGP30, SHT31-D) |
-| 9 | GPIO6 | I2C SCL (SGP30, SHT31-D) |
+| 8 | GPIO5 | I2C SCL (SGP30, SHT31-D) |
+| 9 | GPIO6 | I2C SDA (SGP30, SHT31-D) |
 | 12 | GPIO9 | CAN TX |
 | 13 | GPIO10 | CAN RX |
 | - | GPIO21 | Onboard RGB LED |
