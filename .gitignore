@@ -6,3 +6,4 @@
 EDA/**/*.zip
 EDA/**/*-backups/
 **/[Cc][Ll][Aa][Uu][Dd][Ee].[Mm][Dd]
+**/*.FCBak
