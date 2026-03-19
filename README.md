@@ -1,5 +1,7 @@
 # TrailCurrent Borealis
 
+![TrailCurrent Borealis](DOCS/images/borealis_main.png)
+
 An ESP32-S3-based environmental sensor node that monitors temperature, humidity, TVOC, and eCO2, broadcasting readings over a CAN bus. Supports over-the-air (OTA) firmware updates and WiFi credential provisioning via CAN.
 
 ## Hardware
