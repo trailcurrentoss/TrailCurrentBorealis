@@ -2,11 +2,11 @@
 
 ![TrailCurrent Borealis](DOCS/images/borealis_main.png)
 
-An ESP32-S3-based environmental sensor node that monitors temperature, humidity, TVOC, and eCO2, broadcasting readings over a CAN bus. Supports over-the-air (OTA) firmware updates and WiFi credential provisioning via CAN.
+An ESP32-S3-based environmental sensor node that monitors temperature, humidity, TVOC, and eCO2, broadcasting readings over a CAN bus. Supports over-the-air (OTA) firmware updates, WiFi credential provisioning via CAN, and network discovery for integration with TrailCurrent Headwaters.
 
 ## Hardware
 
-- **MCU:** [Waveshare ESP32-S3-Zero](https://www.waveshare.com/product/arduino/boards-kits/esp32-s3/esp32-s3-zero.htm) (CPU clocked at 80 MHz for reduced power consumption)
+- **MCU:** [Waveshare ESP32-S3-Zero](https://www.waveshare.com/product/arduino/boards-kits/esp32-s3/esp32-s3-zero.htm) (4MB flash)
 - **Temperature/Humidity:** SHT31-D sensor (I2C)
 - **Air Quality:** SGP30 TVOC and eCO2 sensor (I2C)
 - **CAN Transceiver:** SN65HVD230DR (3.3V, 500 kbps)
@@ -16,10 +16,10 @@ An ESP32-S3-based environmental sensor node that monitors temperature, humidity,
 
 | Pin | GPIO | Function |
 |-----|-------|----------|
-| 8 | GPIO5 | I2C SCL (SGP30, SHT31-D) |
-| 9 | GPIO6 | I2C SDA (SGP30, SHT31-D) |
-| 12 | GPIO9 | CAN TX |
-| 13 | GPIO10 | CAN RX |
+| 8 | GPIO5 | I2C SDA (SGP30, SHT31-D) |
+| 9 | GPIO6 | I2C SCL (SGP30, SHT31-D) |
+| 10 | GPIO7 | CAN TX |
+| 11 | GPIO8 | CAN RX |
 | - | GPIO21 | Onboard RGB LED |
 
 ### Circuit Notes
@@ -28,22 +28,54 @@ An ESP32-S3-based environmental sensor node that monitors temperature, humidity,
 
 ## Building
 
-This project uses [PlatformIO](https://platformio.org/).
+This project uses [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/get-started/index.html) (v5.x).
 
 ```bash
-# Build
-pio run
+# Configure (first time only)
+idf.py set-target esp32s3
 
-# Upload via USB
-pio run --target upload
+# Build
+idf.py build
+
+# Flash via USB
+idf.py flash
 
 # Monitor serial output
-pio device monitor
+idf.py monitor
+
+# Build, flash, and monitor in one step
+idf.py build flash monitor
 ```
+
+### OTA Upload
+
+```bash
+curl -X POST http://<hostname>.local/ota --data-binary @build/borealis.bin
+```
+
+## Architecture
+
+The firmware is structured as a multi-file ESP-IDF project:
+
+| File | Purpose |
+|------|---------|
+| `main/main.c` | Sensor reading loop, TWAI task, LED control |
+| `main/sensors.c/h` | I2C drivers for SHT31-D and SGP30 |
+| `main/ota.c/h` | NVS WiFi credentials, OTA HTTP server, WiFi config CAN protocol |
+| `main/discovery.c/h` | mDNS-based network discovery for Headwaters registration |
+
+### CAN Bus Task
+
+The TWAI (CAN) driver runs in a dedicated FreeRTOS task with alert-based message handling. It uses a dual-state transmission model:
+
+- **TX_ACTIVE** (33ms period): Normal operation when peers are detected on the bus
+- **TX_PROBING** (2000ms period): Slow probe when no peers are ACKing, reduces bus noise
+
+The task automatically transitions between states based on TX success/failure and incoming messages. Bus-off recovery is handled via TWAI alerts.
 
 ## CAN Bus Protocol
 
-All communication uses a 500 kbps CAN bus. The device transmits sensor data and receives OTA/WiFi configuration commands.
+All communication uses a 500 kbps CAN bus. The device transmits sensor data and receives OTA/WiFi/discovery commands.
 
 ### Sensor Data (TX)
 
@@ -57,7 +89,7 @@ All communication uses a 500 kbps CAN bus. The device transmits sensor data and 
 | 4-5 | TVOC in ppb (big-endian) |
 | 6-7 | eCO2 in ppm (big-endian) |
 
-Sensor data is transmitted every 2 seconds when both SHT31-D and SGP30 readings are valid. The SGP30 receives humidity compensation from the SHT31-D for improved accuracy.
+Sensor data is transmitted every 33ms (when in TX_ACTIVE mode) with the most recent readings. The SGP30 receives humidity compensation from the SHT31-D for improved accuracy.
 
 ### OTA Trigger (RX)
 
@@ -69,7 +101,7 @@ Send the last 3 bytes of the target device's MAC address to trigger OTA mode on 
 |------|---------|
 | 0-2 | Target MAC bytes (e.g., `F2 7E 6C` for hostname `esp32-F27E6C`) |
 
-When triggered, the device connects to its configured WiFi network and listens for ArduinoOTA uploads for 3 minutes before returning to normal operation.
+When triggered, the device connects to its configured WiFi network, starts an HTTP server at `/ota`, and waits for a firmware upload for 3 minutes before returning to normal operation.
 
 ### WiFi Configuration (RX)
 
@@ -86,6 +118,20 @@ WiFi credentials are provisioned over CAN using a chunked protocol. Credentials 
 
 The protocol includes a 5-second timeout — if chunks stop arriving, the state resets.
 
+### Discovery Trigger (RX)
+
+**CAN ID:** `0x02` | **DLC:** any (broadcast)
+
+When received, the device connects to WiFi and advertises itself via mDNS (`_trailcurrent._tcp`) with TXT records:
+
+| Key | Value |
+|-----|-------|
+| `type` | `borealis` |
+| `canid` | `0x1F` |
+| `fw` | firmware version |
+
+Headwaters confirms registration by calling `GET /discovery/confirm`. The discovery window is 3 minutes.
+
 ## Status LED
 
 The onboard RGB LED indicates the device state:
@@ -100,9 +146,9 @@ The onboard RGB LED indicates the device state:
 1. Provision WiFi credentials via CAN (one-time setup, stored in NVS)
 2. Send an OTA trigger message on CAN ID `0x00` with the target device's MAC suffix
 3. The LED turns blue and the device connects to WiFi
-4. Upload firmware using ArduinoOTA within the 3-minute window
-5. On success, the device reboots with new firmware and the LED returns to green
-6. On timeout, the device disconnects WiFi and resumes normal operation
+4. Upload firmware via HTTP: `curl -X POST http://<hostname>.local/ota --data-binary @build/borealis.bin`
+5. On success, the device reboots with new firmware
+6. On timeout (3 minutes), the device disconnects WiFi and resumes normal operation
 
 The device hostname is printed to serial at boot (format: `esp32-XXYYZZ`).
 
@@ -126,16 +172,6 @@ The device hostname is printed to serial at boot (format: `esp32-XXYYZZ`).
 | 400-999 | Normal |
 | 1000-1999 | High |
 | >= 2000 | Alarm |
-
-## Dependencies
-
-| Library | Source |
-|---------|--------|
-| [ESP32ArduinoDebugLibrary](https://github.com/trailcurrentoss/ESP32ArduinoDebugLibrary) | TrailCurrent |
-| [TwaiTaskBasedLibrary](https://github.com/trailcurrentoss/TwaiTaskBasedLibraryWROOM32) | TrailCurrent |
-| [OtaUpdateLibrary](https://github.com/trailcurrentoss/OtaUpdateLibraryWROOM32) | TrailCurrent |
-| [Adafruit SHT31 Library](https://github.com/adafruit/Adafruit_SHT31) | Adafruit |
-| [Adafruit SGP30 Sensor](https://github.com/adafruit/Adafruit_SGP30) | Adafruit |
 
 ## License
 
