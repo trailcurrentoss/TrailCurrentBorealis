@@ -6,6 +6,8 @@
 #include "driver/twai.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 #include "led_strip.h"
 #include "ota.h"
 #include "discovery.h"
@@ -20,8 +22,9 @@ static const char *TAG = "borealis";
 #define CAN_RX_PIN    8
 #define RGB_LED_PIN   21
 
-// CAN message identifier for sensor data
-#define CAN_ID_SENSOR_DATA  0x1F
+// CAN message identifiers
+#define CAN_ID_SENSOR_DATA          0x1F
+#define CAN_ID_BOREALIS_CALIBRATION 0x21
 
 // Sensor read interval
 #define SENSOR_READ_INTERVAL_MS  2000
@@ -56,6 +59,43 @@ static void led_set(uint8_t r, uint8_t g, uint8_t b)
         led_strip_set_pixel(s_led_strip, 0, r, g, b);
         led_strip_refresh(s_led_strip);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Temperature calibration offset (tenths of °C, from NVS / CAN)
+// ---------------------------------------------------------------------------
+
+#define NVS_NS_CALIBRATION  "calibration"
+#define NVS_KEY_TEMP_OFFSET "temp_offset"
+
+static volatile int16_t s_temp_offset_tenths = 0;  // e.g. -28 = -2.8°C
+
+static void calibration_load(void)
+{
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS_CALIBRATION, NVS_READONLY, &h) != ESP_OK) return;
+    int16_t val = 0;
+    if (nvs_get_i16(h, NVS_KEY_TEMP_OFFSET, &val) == ESP_OK) {
+        s_temp_offset_tenths = val;
+        ESP_LOGI(TAG, "Loaded temp calibration offset: %d tenths C (%.1fC)",
+                 val, val / 10.0f);
+    }
+    nvs_close(h);
+}
+
+static void calibration_save_temp_offset(int16_t tenths)
+{
+    s_temp_offset_tenths = tenths;
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS_CALIBRATION, NVS_READWRITE, &h) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to open NVS for calibration write");
+        return;
+    }
+    nvs_set_i16(h, NVS_KEY_TEMP_OFFSET, tenths);
+    nvs_commit(h);
+    nvs_close(h);
+    ESP_LOGI(TAG, "Saved temp calibration offset: %d tenths C (%.1fC)",
+             tenths, tenths / 10.0f);
 }
 
 // ---------------------------------------------------------------------------
@@ -167,6 +207,11 @@ static void twai_task(void *arg)
                     ota_handle_wifi_config(msg.data, msg.data_length_code);
                 } else if (msg.identifier == CAN_ID_DISCOVERY_TRIGGER) {
                     discovery_handle_trigger();
+                } else if (msg.identifier == CAN_ID_BOREALIS_CALIBRATION) {
+                    if (msg.data_length_code >= 2) {
+                        int16_t offset = (int16_t)((msg.data[0] << 8) | msg.data[1]);
+                        calibration_save_temp_offset(offset);
+                    }
                 }
             }
         }
@@ -238,6 +283,9 @@ void app_main(void)
     discovery_init();
     ESP_LOGI(TAG, "Hostname: %s", ota_get_hostname());
 
+    // Load temperature calibration offset from NVS
+    calibration_load();
+
     // Initialize I2C sensors
     esp_err_t ret = sensors_init(I2C_SDA_PIN, I2C_SCL_PIN);
     if (ret != ESP_OK) {
@@ -263,7 +311,7 @@ void app_main(void)
         float humidity = 0.0f;
 
         if (sht.valid) {
-            tempC = sht.temperature_c;
+            tempC = sht.temperature_c + (s_temp_offset_tenths / 10.0f);
             humidity = sht.humidity;
             float tempF = tempC * 9.0f / 5.0f + 32.0f;
             ESP_LOGI(TAG, "SHT31: %.1fC / %.1fF, Humidity: %.1f%%", tempC, tempF, humidity);
