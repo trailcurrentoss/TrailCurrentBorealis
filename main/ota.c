@@ -1,4 +1,5 @@
 #include "ota.h"
+#include "discovery.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -340,42 +341,31 @@ bool ota_has_credentials(void)
     return s_has_credentials;
 }
 
-void ota_handle_trigger(const uint8_t *data, uint8_t len)
+// ---------------------------------------------------------------------------
+// OTA task — runs on its own FreeRTOS task to avoid blocking CAN
+// ---------------------------------------------------------------------------
+
+static void ota_task_fn(void *arg)
 {
-    if (len < 3) return;
-
-    char target[16];
-    snprintf(target, sizeof(target), "esp32-%02X%02X%02X",
-             data[0], data[1], data[2]);
-
-    ESP_LOGI(TAG, "OTA trigger target: %s, this device: %s", target, s_hostname);
-
-    if (strcmp(target, s_hostname) != 0) {
-        return;
-    }
-
-    if (!s_has_credentials) {
-        ESP_LOGE(TAG, "OTA triggered but no WiFi credentials available");
-        return;
-    }
-
     ESP_LOGI(TAG, "=== Entering OTA mode ===");
 
     if (!wifi_connect()) {
         ESP_LOGE(TAG, "WiFi connection failed — aborting OTA");
+        s_ota_in_progress = false;
+        vTaskDelete(NULL);
         return;
     }
     mdns_start();
     httpd_handle_t server = start_ota_server();
 
     // Wait for upload or timeout
-    int64_t start = esp_timer_get_time();
     s_ota_complete = false;
+    int64_t start = esp_timer_get_time();
 
     while (!s_ota_complete) {
         vTaskDelay(pdMS_TO_TICKS(100));
-        int64_t elapsed = (esp_timer_get_time() - start) / 1000;
-        if (elapsed >= OTA_TIMEOUT_MS) {
+        int64_t elapsed_ms = (esp_timer_get_time() - start) / 1000;
+        if (elapsed_ms >= OTA_TIMEOUT_MS) {
             ESP_LOGW(TAG, "OTA timeout — no upload received");
             break;
         }
@@ -395,6 +385,44 @@ void ota_handle_trigger(const uint8_t *data, uint8_t len)
     }
 
     ESP_LOGI(TAG, "=== OTA mode exited, resuming normal operation ===");
+    s_ota_in_progress = false;
+    vTaskDelete(NULL);
+}
+
+bool ota_is_running(void)
+{
+    return s_ota_in_progress;
+}
+
+void ota_handle_trigger(const uint8_t *data, uint8_t len)
+{
+    if (len < 3) return;
+
+    char target[16];
+    snprintf(target, sizeof(target), "esp32-%02X%02X%02X",
+             data[0], data[1], data[2]);
+
+    ESP_LOGI(TAG, "OTA trigger target: %s, this device: %s", target, s_hostname);
+
+    if (strcmp(target, s_hostname) != 0) {
+        return;
+    }
+
+    if (s_ota_in_progress) {
+        ESP_LOGW(TAG, "OTA already in progress — ignoring trigger");
+        return;
+    }
+    if (discovery_is_running()) {
+        ESP_LOGW(TAG, "Discovery in progress — cannot start OTA");
+        return;
+    }
+    if (!s_has_credentials) {
+        ESP_LOGE(TAG, "OTA triggered but no WiFi credentials available");
+        return;
+    }
+
+    s_ota_in_progress = true;
+    xTaskCreate(ota_task_fn, "ota", 8192, NULL, 3, NULL);
 }
 
 // ---------------------------------------------------------------------------

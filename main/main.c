@@ -200,9 +200,7 @@ static void twai_task(void *arg)
                 if (msg.rtr) continue;
 
                 if (msg.identifier == CAN_ID_OTA_TRIGGER) {
-                    led_set(0, 0, 40);  // Blue: OTA mode
                     ota_handle_trigger(msg.data, msg.data_length_code);
-                    led_set(0, 40, 0);  // Green: back to normal
                 } else if (msg.identifier == CAN_ID_WIFI_CONFIG) {
                     ota_handle_wifi_config(msg.data, msg.data_length_code);
                 } else if (msg.identifier == CAN_ID_DISCOVERY_TRIGGER) {

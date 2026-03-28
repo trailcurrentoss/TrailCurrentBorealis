@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 // Discovery window duration (3 minutes)
 #define DISCOVERY_TIMEOUT_MS 180000
@@ -10,6 +11,12 @@
  * Must be called after ota_init().
  */
 void discovery_init(void);
+
+/**
+ * Check whether discovery is currently in progress.
+ * Used by OTA to enforce mutual exclusion.
+ */
+bool discovery_is_running(void);
 
 /**
  * Handle a CAN discovery trigger (ID 0x02, broadcast).

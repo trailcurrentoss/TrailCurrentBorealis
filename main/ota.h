@@ -50,6 +50,12 @@ void wifi_disconnect(void);
 void ota_handle_trigger(const uint8_t *data, uint8_t len);
 
 /**
+ * Check whether OTA is currently in progress.
+ * Used by discovery to enforce mutual exclusion.
+ */
+bool ota_is_running(void);
+
+/**
  * Handle a CAN WiFi config message (ID 0x01).
  * Implements the chunked credential provisioning protocol.
  */

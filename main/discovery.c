@@ -152,10 +152,19 @@ static void discovery_task_fn(void *arg)
     vTaskDelete(NULL);
 }
 
+bool discovery_is_running(void)
+{
+    return s_discovery_running;
+}
+
 void discovery_handle_trigger(void)
 {
     if (s_discovery_running) {
         ESP_LOGW(TAG, "Discovery already in progress — ignoring trigger");
+        return;
+    }
+    if (ota_is_running()) {
+        ESP_LOGW(TAG, "OTA in progress — cannot start discovery");
         return;
     }
     s_discovery_running = true;
