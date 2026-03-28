@@ -281,6 +281,10 @@ void app_main(void)
     discovery_init();
     ESP_LOGI(TAG, "Hostname: %s", ota_get_hostname());
 
+    // CAN runs in its own task — start it before sensors so bus errors
+    // or I2C hangs never prevent CAN from operating
+    xTaskCreatePinnedToCore(twai_task, "twai", 4096, NULL, 5, NULL, 1);
+
     // Load temperature calibration offset from NVS
     calibration_load();
 
@@ -291,9 +295,6 @@ void app_main(void)
     }
 
     sgp30_iaq_init();
-
-    // CAN runs in its own task so bus errors never block sensor reads
-    xTaskCreatePinnedToCore(twai_task, "twai", 4096, NULL, 5, NULL, 1);
 
     ESP_LOGI(TAG, "=== Setup complete ===");
 

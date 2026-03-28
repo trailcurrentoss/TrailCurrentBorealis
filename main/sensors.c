@@ -95,7 +95,7 @@ sht31_data_t sht31_read(void)
 
     // Command: 0x2400 — single shot, high repeatability, no clock stretching
     uint8_t cmd[2] = { 0x24, 0x00 };
-    esp_err_t ret = i2c_master_transmit(s_sht31_dev, cmd, sizeof(cmd), -1);
+    esp_err_t ret = i2c_master_transmit(s_sht31_dev, cmd, sizeof(cmd), 1000);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "SHT31 command failed: %s", esp_err_to_name(ret));
         return result;
@@ -104,7 +104,7 @@ sht31_data_t sht31_read(void)
     vTaskDelay(pdMS_TO_TICKS(20));
 
     uint8_t data[6];
-    ret = i2c_master_receive(s_sht31_dev, data, sizeof(data), -1);
+    ret = i2c_master_receive(s_sht31_dev, data, sizeof(data), 1000);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "SHT31 read failed: %s", esp_err_to_name(ret));
         return result;
@@ -135,7 +135,7 @@ esp_err_t sgp30_iaq_init(void)
     if (s_sgp30_dev == NULL) return ESP_ERR_INVALID_STATE;
 
     uint8_t cmd[2] = { 0x20, 0x03 };
-    esp_err_t ret = i2c_master_transmit(s_sgp30_dev, cmd, sizeof(cmd), -1);
+    esp_err_t ret = i2c_master_transmit(s_sgp30_dev, cmd, sizeof(cmd), 1000);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "SGP30 IAQ init failed: %s", esp_err_to_name(ret));
     } else {
@@ -153,7 +153,7 @@ sgp30_data_t sgp30_measure(void)
 
     // Measure IAQ: command 0x2008
     uint8_t cmd[2] = { 0x20, 0x08 };
-    esp_err_t ret = i2c_master_transmit(s_sgp30_dev, cmd, sizeof(cmd), -1);
+    esp_err_t ret = i2c_master_transmit(s_sgp30_dev, cmd, sizeof(cmd), 1000);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "SGP30 IAQ command failed: %s", esp_err_to_name(ret));
         return result;
@@ -162,7 +162,7 @@ sgp30_data_t sgp30_measure(void)
     vTaskDelay(pdMS_TO_TICKS(15));
 
     uint8_t data[6];
-    ret = i2c_master_receive(s_sgp30_dev, data, sizeof(data), -1);
+    ret = i2c_master_receive(s_sgp30_dev, data, sizeof(data), 1000);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "SGP30 IAQ read failed: %s", esp_err_to_name(ret));
         return result;
@@ -187,7 +187,7 @@ void sgp30_measure_raw(sgp30_data_t *data)
 
     // Measure raw signals: command 0x2050
     uint8_t cmd[2] = { 0x20, 0x50 };
-    esp_err_t ret = i2c_master_transmit(s_sgp30_dev, cmd, sizeof(cmd), -1);
+    esp_err_t ret = i2c_master_transmit(s_sgp30_dev, cmd, sizeof(cmd), 1000);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "SGP30 raw command failed: %s", esp_err_to_name(ret));
         return;
@@ -196,7 +196,7 @@ void sgp30_measure_raw(sgp30_data_t *data)
     vTaskDelay(pdMS_TO_TICKS(30));
 
     uint8_t raw[6];
-    ret = i2c_master_receive(s_sgp30_dev, raw, sizeof(raw), -1);
+    ret = i2c_master_receive(s_sgp30_dev, raw, sizeof(raw), 1000);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "SGP30 raw read failed: %s", esp_err_to_name(ret));
         return;
@@ -223,7 +223,7 @@ esp_err_t sgp30_set_humidity(uint16_t ah_scaled)
     cmd[3] = ah_scaled & 0xFF;
     cmd[4] = crc8(&cmd[2], 2);
 
-    esp_err_t ret = i2c_master_transmit(s_sgp30_dev, cmd, sizeof(cmd), -1);
+    esp_err_t ret = i2c_master_transmit(s_sgp30_dev, cmd, sizeof(cmd), 1000);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "SGP30 set humidity failed: %s", esp_err_to_name(ret));
     }
