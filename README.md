@@ -132,6 +132,19 @@ When received, the device connects to WiFi and advertises itself via mDNS (`_tra
 
 Headwaters confirms registration by calling `GET /discovery/confirm`. The discovery window is 3 minutes.
 
+### Firmware Version Report (TX)
+
+**CAN ID:** `0x04` | **DLC:** 6
+
+Sent once on boot after CAN initialization. Reports the running firmware version so Headwaters can track what each device is running (including after OTA updates).
+
+| Byte | Content |
+|------|---------|
+| 0-2 | Last 3 bytes of device WiFi MAC (matches hostname `esp32-XXYYZZ`) |
+| 3 | Version major |
+| 4 | Version minor |
+| 5 | Version patch |
+
 ## Status LED
 
 The onboard RGB LED indicates the device state:
