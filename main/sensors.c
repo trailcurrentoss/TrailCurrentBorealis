@@ -37,6 +37,25 @@ static bool s_mq6_calibrated = false;
 #define MQ6_VCC          5.0f
 #define MQ6_RL_KOHMS     10.0f
 
+// ADC sampling parameters (chosen, not defaulted)
+//   Oversampling N=64: noise reduction ∝ √N → ~8× reduction from the ~10-20 mV
+//     ADC noise floor at DB_12, leaving ~1-3 mV residual noise.  Total sample
+//     time ~1.6 ms, negligible at the 5-second sensor cadence.  256 would gain
+//     ~2× more but adds no practical value for this slow signal.
+//   Trim N=4: discard the highest 4 and lowest 4 samples before averaging.
+//     A trimmed mean is robust to occasional outliers (WiFi TX bursts, ESD,
+//     supply transients) that pure mean would let propagate.  Critical for a
+//     safety sensor where a single bad reading could trigger a false alarm.
+//   Warmup reads N=2: the ESP32-S3 sample-and-hold capacitor charges on first
+//     read after idle; the very first sample can be off.  Discard before
+//     starting the measurement set.
+//   V_MAX_MV=3300: 12 dB attenuation has a typical max of ~3.1V; 3.3V is a
+//     conservative upper bound for sanity-rejecting nonsense readings.
+#define MQ6_ADC_SAMPLES        64
+#define MQ6_ADC_TRIM           4
+#define MQ6_ADC_WARMUP_READS   2
+#define MQ6_ADC_V_MAX_MV       3300
+
 // ---------------------------------------------------------------------------
 // CRC-8 (polynomial 0x31, init 0xFF) — used by SCD41, SGP40, and SHT-family
 // ---------------------------------------------------------------------------
@@ -371,8 +390,8 @@ esp_err_t sensors_init_mq6(int adc_gpio)
     }
 
     adc_oneshot_chan_cfg_t chan_cfg = {
-        .atten = ADC_ATTEN_DB_12,    // ~0-3.1V range
-        .bitwidth = ADC_BITWIDTH_DEFAULT,
+        .atten = ADC_ATTEN_DB_12,   // ~0-3.1V; required to capture our 0-3V divided signal
+        .bitwidth = ADC_BITWIDTH_12, // explicit 12-bit (also the ESP32-S3 default)
     };
     ret = adc_oneshot_config_channel(s_adc_handle, s_mq6_channel, &chan_cfg);
     if (ret != ESP_OK) {
@@ -385,10 +404,12 @@ esp_err_t sensors_init_mq6(int adc_gpio)
         .unit_id = ADC_UNIT_1,
         .chan = s_mq6_channel,
         .atten = ADC_ATTEN_DB_12,
-        .bitwidth = ADC_BITWIDTH_DEFAULT,
+        .bitwidth = ADC_BITWIDTH_12,
     };
-    if (adc_cali_create_scheme_curve_fitting(&cali_cfg, &s_adc_cali) != ESP_OK) {
-        ESP_LOGW(TAG, "ADC calibration scheme unavailable, voltages will be approximate");
+    if (adc_cali_create_scheme_curve_fitting(&cali_cfg, &s_adc_cali) == ESP_OK) {
+        ESP_LOGI(TAG, "ADC calibration: curve fitting (per-chip eFuse data)");
+    } else {
+        ESP_LOGW(TAG, "ADC calibration unavailable — using linear fallback (~6%% error)");
         s_adc_cali = NULL;
     }
 
@@ -415,30 +436,76 @@ esp_err_t sensors_init_mq6(int adc_gpio)
     return ESP_OK;
 }
 
+// Insertion sort — n=64 takes ~10 µs on the S3, simpler than qsort and
+// avoids pulling in stdlib for this one purpose.
+static void mq6_sort_ascending(int *a, int n)
+{
+    for (int i = 1; i < n; i++) {
+        int key = a[i];
+        int j = i - 1;
+        while (j >= 0 && a[j] > key) {
+            a[j + 1] = a[j];
+            j--;
+        }
+        a[j + 1] = key;
+    }
+}
+
 static bool mq6_sample_voltage(float *v_at_pin_out, float *v_mq6_out)
 {
     if (!s_mq6_initialized) return false;
 
-    // Average several readings for noise suppression
-    int total = 0;
-    int samples = 16;
-    for (int i = 0; i < samples; i++) {
-        int raw;
-        if (adc_oneshot_read(s_adc_handle, s_mq6_channel, &raw) != ESP_OK) return false;
-        total += raw;
+    // Discard initial reads — the ADC sample-and-hold cap charges on the first
+    // conversion after idle, so the first read or two can be off.
+    int dummy;
+    for (int i = 0; i < MQ6_ADC_WARMUP_READS; i++) {
+        if (adc_oneshot_read(s_adc_handle, s_mq6_channel, &dummy) != ESP_OK) {
+            return false;
+        }
     }
-    int avg_raw = total / samples;
 
+    // Collect oversampled raw counts.
+    int samples[MQ6_ADC_SAMPLES];
+    for (int i = 0; i < MQ6_ADC_SAMPLES; i++) {
+        if (adc_oneshot_read(s_adc_handle, s_mq6_channel, &samples[i]) != ESP_OK) {
+            return false;
+        }
+    }
+
+    // Trimmed mean: sort ascending, drop top-N and bottom-N, average the rest.
+    // Robust to occasional outliers (WiFi TX, ESD, supply transients) that
+    // could otherwise trigger a false safety alarm via a single bad reading.
+    mq6_sort_ascending(samples, MQ6_ADC_SAMPLES);
+    int kept = MQ6_ADC_SAMPLES - 2 * MQ6_ADC_TRIM;
+    int total = 0;
+    for (int i = MQ6_ADC_TRIM; i < MQ6_ADC_SAMPLES - MQ6_ADC_TRIM; i++) {
+        total += samples[i];
+    }
+    int avg_raw = total / kept;
+
+    // Apply per-chip ADC calibration if available (curve fitting from eFuse).
     int mv = 0;
     if (s_adc_cali) {
-        adc_cali_raw_to_voltage(s_adc_cali, avg_raw, &mv);
+        if (adc_cali_raw_to_voltage(s_adc_cali, avg_raw, &mv) != ESP_OK) {
+            return false;
+        }
     } else {
-        // Rough approximation: 12-bit ADC, ~3.1V max with 12dB attenuation
-        mv = (avg_raw * 3100) / 4095;
+        // Linear fallback for chips without eFuse calibration data.
+        // Per-chip variation in actual range means this is only ~6% accurate.
+        const int adc_max = (1 << 12) - 1;
+        mv = (avg_raw * 3100) / adc_max;
+    }
+
+    // Sanity check — calibrated voltage outside the achievable range means
+    // something went wrong (broken cable, ADC fault, EMI burst).  Reject the
+    // sample rather than feed nonsense into the Rs/R0 calculation.
+    if (mv < 0 || mv > MQ6_ADC_V_MAX_MV) {
+        ESP_LOGW(TAG, "MQ-6 ADC voltage out of range: %d mV", mv);
+        return false;
     }
 
     float v_pin = (float)mv / 1000.0f;
-    float v_mq6 = v_pin / MQ6_VOLTAGE_DIVIDER_RATIO;  // recover original 0-5V
+    float v_mq6 = v_pin / MQ6_VOLTAGE_DIVIDER_RATIO;  // recover original 0-5V swing
 
     if (v_at_pin_out) *v_at_pin_out = v_pin;
     if (v_mq6_out)    *v_mq6_out    = v_mq6;
