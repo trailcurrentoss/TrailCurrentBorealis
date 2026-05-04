@@ -1,4 +1,5 @@
 #include "discovery.h"
+#include "wifi_config.h"
 #include "ota.h"
 
 #include <string.h>
@@ -14,14 +15,14 @@
 static const char *TAG = "discovery";
 
 // ---------------------------------------------------------------------------
-// Compile-time module identity
+// Module identity
 // ---------------------------------------------------------------------------
 
 #ifndef MODULE_TYPE
 #error "MODULE_TYPE must be defined (e.g., \"borealis\")"
 #endif
 
-// CAN TX ID for status messages (sensor data)
+// CAN TX ID for status messages (primary status frame for Borealis)
 #define CAN_STATUS_ID  0x1F
 
 // ---------------------------------------------------------------------------
@@ -37,7 +38,7 @@ static volatile bool s_discovery_running = false;
 
 static void discovery_mdns_start(void)
 {
-    const char *hostname = ota_get_hostname();
+    const char *hostname = wifi_config_get_hostname();
 
     char canid_str[8];
     snprintf(canid_str, sizeof(canid_str), "0x%02X", CAN_STATUS_ID);
@@ -104,7 +105,7 @@ void discovery_init(void)
 
 static void discovery_task_fn(void *arg)
 {
-    if (!ota_has_credentials()) {
+    if (!wifi_config_has_credentials()) {
         ESP_LOGE(TAG, "Discovery triggered but no WiFi credentials — cannot respond");
         s_discovery_running = false;
         vTaskDelete(NULL);
@@ -164,7 +165,7 @@ void discovery_handle_trigger(void)
         return;
     }
     if (ota_is_running()) {
-        ESP_LOGW(TAG, "OTA in progress — cannot start discovery");
+        ESP_LOGW(TAG, "OTA in progress — ignoring discovery trigger");
         return;
     }
     s_discovery_running = true;

@@ -1,104 +1,53 @@
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/twai.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-#include "esp_app_desc.h"
-#include "esp_mac.h"
-#include "nvs_flash.h"
-#include "nvs.h"
-#include "led_strip.h"
+#include "can_common.h"
+#include "wifi_config.h"
 #include "ota.h"
 #include "discovery.h"
 #include "sensors.h"
 
 static const char *TAG = "borealis";
 
-// Waveshare ESP32-S3-Zero pin assignments
-#define I2C_SDA_PIN   5
-#define I2C_SCL_PIN   6
-#define CAN_TX_PIN    7
-#define CAN_RX_PIN    8
-#define RGB_LED_PIN   21
+// Waveshare ESP32-S3-RS485-CAN pin assignments
+#define I2C_SDA_PIN          5
+#define I2C_SCL_PIN          6
+#define MQ6_ADC_GPIO         3   // ADC1_CH2 via 10k+15k divider
+#define CAN_RX_PIN           16  // hardwired internal
+#define CAN_TX_PIN           15  // hardwired internal
 
-// CAN message identifiers
-#define CAN_ID_SENSOR_DATA          0x1F
-#define CAN_ID_BOREALIS_CALIBRATION 0x21
+// CAN protocol IDs (match sibling-project conventions)
+#define CAN_ID_OTA               0x00
+#define CAN_ID_WIFI_CONFIG       0x01
+#define CAN_ID_DISCOVERY_TRIGGER 0x02
+#define CAN_ID_ENVIRONMENTAL     0x1F
+#define CAN_ID_SAFETY            0x20
 
-// Sensor read interval
-#define SENSOR_READ_INTERVAL_MS  2000
+// Periods
+#define CAN_STATUS_PERIOD_MS  1000
+#define TX_PROBE_INTERVAL_MS  2000
+#define SENSOR_READ_INTERVAL_MS 5000  // SCD41 periodic = 5s
 
-// CAN transmit periods
-#define CAN_STATUS_PERIOD_MS     33
-#define TX_PROBE_INTERVAL_MS     2000
+// Alarm thresholds (match README)
+#define CO_PPM_WARNING        70
+#define CO_PPM_ALARM          200
+#define LPG_RATIO_WARNING_X1000  500   // Rs/R0 < 0.5
+#define LPG_RATIO_ALARM_X1000    300   // Rs/R0 < 0.3
+#define CO2_PPM_WARNING       1500
+#define CO2_PPM_ALARM         2500
+#define VOC_INDEX_ALARM       400
 
-// ---------------------------------------------------------------------------
-// WS2812 RGB LED (via led_strip driver)
-// ---------------------------------------------------------------------------
-
-static led_strip_handle_t s_led_strip = NULL;
-
-static void led_init(void)
-{
-    led_strip_config_t strip_config = {
-        .strip_gpio_num = RGB_LED_PIN,
-        .max_leds = 1,
-        .led_model = LED_MODEL_WS2812,
-    };
-    led_strip_rmt_config_t rmt_config = {
-        .resolution_hz = 10 * 1000 * 1000,  // 10 MHz
-    };
-    led_strip_new_rmt_device(&strip_config, &rmt_config, &s_led_strip);
-    led_strip_clear(s_led_strip);
-}
-
-static void led_set(uint8_t r, uint8_t g, uint8_t b)
-{
-    if (s_led_strip) {
-        led_strip_set_pixel(s_led_strip, 0, r, g, b);
-        led_strip_refresh(s_led_strip);
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Temperature calibration offset (tenths of °C, from NVS / CAN)
-// ---------------------------------------------------------------------------
-
-#define NVS_NS_CALIBRATION  "calibration"
-#define NVS_KEY_TEMP_OFFSET "temp_offset"
-
-static volatile int16_t s_temp_offset_tenths = 0;  // e.g. -28 = -2.8°C
-
-static void calibration_load(void)
-{
-    nvs_handle_t h;
-    if (nvs_open(NVS_NS_CALIBRATION, NVS_READONLY, &h) != ESP_OK) return;
-    int16_t val = 0;
-    if (nvs_get_i16(h, NVS_KEY_TEMP_OFFSET, &val) == ESP_OK) {
-        s_temp_offset_tenths = val;
-        ESP_LOGI(TAG, "Loaded temp calibration offset: %d tenths C (%.1fC)",
-                 val, val / 10.0f);
-    }
-    nvs_close(h);
-}
-
-static void calibration_save_temp_offset(int16_t tenths)
-{
-    s_temp_offset_tenths = tenths;
-    nvs_handle_t h;
-    if (nvs_open(NVS_NS_CALIBRATION, NVS_READWRITE, &h) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to open NVS for calibration write");
-        return;
-    }
-    nvs_set_i16(h, NVS_KEY_TEMP_OFFSET, tenths);
-    nvs_commit(h);
-    nvs_close(h);
-    ESP_LOGI(TAG, "Saved temp calibration offset: %d tenths C (%.1fC)",
-             tenths, tenths / 10.0f);
-}
+#define ALARM_FLAG_CO_WARN     0x01
+#define ALARM_FLAG_CO_ALARM    0x02
+#define ALARM_FLAG_LPG_WARN    0x04
+#define ALARM_FLAG_LPG_ALARM   0x08
+#define ALARM_FLAG_CO2_WARN    0x10
+#define ALARM_FLAG_CO2_ALARM   0x20
+#define ALARM_FLAG_VOC_ALARM   0x40
 
 // ---------------------------------------------------------------------------
 // Shared sensor data (written by main task, read by TWAI task)
@@ -107,55 +56,28 @@ static void calibration_save_temp_offset(int16_t tenths)
 static volatile int8_t   s_temp_c_int;
 static volatile int8_t   s_temp_f_int;
 static volatile uint16_t s_humidity_scaled;
-static volatile uint16_t s_tvoc;
-static volatile uint16_t s_eco2;
-static volatile bool     s_sensor_valid = false;
+static volatile uint16_t s_co2_ppm;
+static volatile uint16_t s_voc_index;
+
+static volatile uint16_t s_co_ppm;
+static volatile uint16_t s_lpg_rs_r0_x1000;
+static volatile uint8_t  s_alarm_flags;
+
+static volatile bool s_env_valid    = false;
+static volatile bool s_safety_valid = false;
 
 // ---------------------------------------------------------------------------
-// TWAI (CAN) task — runs independently so bus errors never stall sensors
+// TWAI (CAN) task — independent FreeRTOS task following the canonical
+// TX_ACTIVE / TX_PROBING state machine used across all TrailCurrent modules.
 // ---------------------------------------------------------------------------
 
 static void twai_task(void *arg)
 {
-    twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(
-        (gpio_num_t)CAN_TX_PIN, (gpio_num_t)CAN_RX_PIN, TWAI_MODE_NORMAL);
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
-    twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+    // Configure alerts BEFORE any bus activity so no error transitions are missed.
+    twai_reconfigure_alerts(CAN_COMMON_ALERTS, NULL);
 
-    if (twai_driver_install(&g_config, &t_config, &f_config) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to install TWAI driver");
-        vTaskDelete(NULL);
-        return;
-    }
-    if (twai_start() != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to start TWAI driver");
-        vTaskDelete(NULL);
-        return;
-    }
-
-    // Broadcast firmware version on CAN 0x04 at startup
-    {
-        uint8_t mac[6];
-        esp_read_mac(mac, ESP_MAC_WIFI_STA);
-        const esp_app_desc_t *app = esp_app_get_description();
-        unsigned maj = 0, min = 0, pat = 0;
-        sscanf(app->version, "%u.%u.%u", &maj, &min, &pat);
-        twai_message_t ver_msg = {
-            .identifier = 0x04,
-            .data_length_code = 6,
-            .data = { mac[3], mac[4], mac[5], maj, min, pat }
-        };
-        twai_transmit(&ver_msg, pdMS_TO_TICKS(50));
-        ESP_LOGI(TAG, "Version broadcast: %s (CAN 0x04)", app->version);
-    }
-
-    uint32_t alerts = TWAI_ALERT_RX_DATA | TWAI_ALERT_ERR_PASS |
-                      TWAI_ALERT_BUS_ERROR | TWAI_ALERT_RX_QUEUE_FULL |
-                      TWAI_ALERT_BUS_OFF | TWAI_ALERT_BUS_RECOVERED |
-                      TWAI_ALERT_ERR_ACTIVE | TWAI_ALERT_TX_FAILED |
-                      TWAI_ALERT_TX_SUCCESS;
-    twai_reconfigure_alerts(alerts, NULL);
-    ESP_LOGI(TAG, "TWAI driver started (NORMAL mode, 500 kbps)");
+    // Alerts armed — version broadcast TX failure is caught by the state machine.
+    can_common_version_broadcast();
 
     typedef enum { TX_ACTIVE, TX_PROBING } tx_state_t;
     bool bus_off = false;
@@ -170,11 +92,12 @@ static void twai_task(void *arg)
         uint32_t triggered;
         twai_read_alerts(&triggered, pdMS_TO_TICKS(CAN_STATUS_PERIOD_MS));
 
+        // Bus-off: stop transmitting, initiate recovery
         if (triggered & TWAI_ALERT_BUS_OFF) {
             ESP_LOGE(TAG, "TWAI bus-off, initiating recovery");
             bus_off = true;
             twai_initiate_recovery();
-            continue;
+            // No continue — fall through so RX_DATA in the same poll is still processed.
         }
 
         if (triggered & TWAI_ALERT_BUS_RECOVERED) {
@@ -201,6 +124,7 @@ static void twai_task(void *arg)
             if (tx_state == TX_PROBING) {
                 tx_state = TX_ACTIVE;
                 tx_fail_count = 0;
+                can_common_version_broadcast();
                 ESP_LOGI(TAG, "TWAI probe ACK'd, peer detected, resuming normal TX");
             }
             tx_fail_count = 0;
@@ -211,75 +135,100 @@ static void twai_task(void *arg)
             if (tx_state == TX_PROBING) {
                 tx_state = TX_ACTIVE;
                 tx_fail_count = 0;
+                can_common_version_broadcast();
                 ESP_LOGI(TAG, "TWAI peer detected via RX, resuming normal TX");
             }
             twai_message_t msg;
             while (twai_receive(&msg, 0) == ESP_OK) {
                 if (msg.rtr) continue;
 
-                if (msg.identifier == CAN_ID_OTA_TRIGGER) {
-                    ota_handle_trigger(msg.data, msg.data_length_code);
-                } else if (msg.identifier == CAN_ID_WIFI_CONFIG) {
-                    ota_handle_wifi_config(msg.data, msg.data_length_code);
-                } else if (msg.identifier == CAN_ID_DISCOVERY_TRIGGER) {
-                    discovery_handle_trigger();
-                } else if (msg.identifier == CAN_ID_BOREALIS_CALIBRATION) {
-                    if (msg.data_length_code >= 2) {
-                        int16_t offset = (int16_t)((msg.data[0] << 8) | msg.data[1]);
-                        calibration_save_temp_offset(offset);
+                switch (msg.identifier) {
+                case CAN_ID_OTA:
+                    if (msg.data_length_code >= 3) {
+                        ota_handle_trigger(msg.data, msg.data_length_code);
                     }
+                    break;
+
+                case CAN_ID_WIFI_CONFIG:
+                    if (msg.data_length_code >= 1) {
+                        wifi_config_handle_can(msg.data, msg.data_length_code);
+                    }
+                    break;
+
+                case CAN_ID_DISCOVERY_TRIGGER:
+                    discovery_handle_trigger();
+                    break;
+
+                default:
+                    break;
                 }
             }
         }
 
-        // Periodic sensor data transmit (skip if bus is down)
+        wifi_config_check_timeout();
+
+        // Periodic transmit
         int64_t now_us = esp_timer_get_time();
         int64_t effective_period = (tx_state == TX_PROBING) ? tx_probe_period_us : tx_period_us;
-        if (!bus_off && s_sensor_valid && (now_us - last_tx_us >= effective_period)) {
+        if (!bus_off && (now_us - last_tx_us >= effective_period)) {
             last_tx_us = now_us;
 
-            uint16_t hum = s_humidity_scaled;
-            uint16_t tvoc = s_tvoc;
-            uint16_t eco2 = s_eco2;
+            if (s_env_valid) {
+                uint16_t hum  = s_humidity_scaled;
+                uint16_t co2  = s_co2_ppm;
+                uint16_t voc  = s_voc_index;
+                twai_message_t m = {
+                    .identifier = CAN_ID_ENVIRONMENTAL,
+                    .data_length_code = 8,
+                    .data = {
+                        (uint8_t)s_temp_c_int,
+                        (uint8_t)s_temp_f_int,
+                        (hum >> 8) & 0xFF,  hum & 0xFF,
+                        (co2 >> 8) & 0xFF,  co2 & 0xFF,
+                        (voc >> 8) & 0xFF,  voc & 0xFF,
+                    }
+                };
+                twai_transmit(&m, 0);
+            }
 
-            twai_message_t m = {
-                .identifier = CAN_ID_SENSOR_DATA,
-                .data_length_code = 8,
-                .data = {
-                    (uint8_t)s_temp_c_int,
-                    (uint8_t)s_temp_f_int,
-                    (hum >> 8) & 0xFF,
-                    hum & 0xFF,
-                    (tvoc >> 8) & 0xFF,
-                    tvoc & 0xFF,
-                    (eco2 >> 8) & 0xFF,
-                    eco2 & 0xFF,
-                }
-            };
-            twai_transmit(&m, 0);
+            if (s_safety_valid) {
+                uint16_t co  = s_co_ppm;
+                uint16_t lpg = s_lpg_rs_r0_x1000;
+                twai_message_t m = {
+                    .identifier = CAN_ID_SAFETY,
+                    .data_length_code = 8,
+                    .data = {
+                        (co  >> 8) & 0xFF, co  & 0xFF,
+                        (lpg >> 8) & 0xFF, lpg & 0xFF,
+                        s_alarm_flags,
+                        0, 0, 0,
+                    }
+                };
+                twai_transmit(&m, 0);
+            }
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// Air quality classification (for logging)
+// Compose alarm flags from the latest sensor state
 // ---------------------------------------------------------------------------
 
-static const char *tvoc_rating(uint16_t tvoc)
+static uint8_t compute_alarm_flags(uint16_t co_ppm, uint16_t lpg_x1000,
+                                   uint16_t co2_ppm, uint16_t voc_index)
 {
-    if (tvoc < 65)   return "Excellent";
-    if (tvoc < 220)  return "Good";
-    if (tvoc < 660)  return "Moderate";
-    if (tvoc < 2200) return "Poor";
-    return "Unhealthy";
-}
+    uint8_t f = 0;
+    if (co_ppm >= CO_PPM_ALARM)         f |= ALARM_FLAG_CO_ALARM;
+    else if (co_ppm >= CO_PPM_WARNING)  f |= ALARM_FLAG_CO_WARN;
 
-static const char *co2_level(uint16_t eco2)
-{
-    if (eco2 < 400)  return "Low";
-    if (eco2 < 1000) return "Normal";
-    if (eco2 < 2000) return "High";
-    return "ALARM";
+    if (lpg_x1000 < LPG_RATIO_ALARM_X1000)        f |= ALARM_FLAG_LPG_ALARM;
+    else if (lpg_x1000 < LPG_RATIO_WARNING_X1000) f |= ALARM_FLAG_LPG_WARN;
+
+    if (co2_ppm >= CO2_PPM_ALARM)         f |= ALARM_FLAG_CO2_ALARM;
+    else if (co2_ppm >= CO2_PPM_WARNING)  f |= ALARM_FLAG_CO2_WARN;
+
+    if (voc_index >= VOC_INDEX_ALARM) f |= ALARM_FLAG_VOC_ALARM;
+    return f;
 }
 
 // ---------------------------------------------------------------------------
@@ -288,88 +237,84 @@ static const char *co2_level(uint16_t eco2)
 
 void app_main(void)
 {
-    // Initialize LED first for immediate visual feedback
-    led_init();
-    led_set(0, 40, 0);  // Green: starting up
-
     ESP_LOGI(TAG, "=== TrailCurrent Borealis ===");
 
-    // OTA / WiFi config / Discovery subsystems
-    ota_init();
-    discovery_init();
-    ESP_LOGI(TAG, "Hostname: %s", ota_get_hostname());
+    // Initialize NVS, hostname, and load WiFi credentials
+    ESP_ERROR_CHECK(wifi_config_init());
 
-    // CAN runs in its own task — start it before sensors so bus errors
-    // or I2C hangs never prevent CAN from operating
-    xTaskCreatePinnedToCore(twai_task, "twai", 4096, NULL, 5, NULL, 1);
-
-    // Load temperature calibration offset from NVS
-    calibration_load();
-
-    // Initialize I2C sensors
-    esp_err_t ret = sensors_init(I2C_SDA_PIN, I2C_SCL_PIN);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Sensor I2C init failed");
+    char ssid[33] = {0};
+    char password[64] = {0};
+    if (wifi_config_load(ssid, sizeof(ssid), password, sizeof(password))) {
+        ESP_LOGI(TAG, "WiFi credentials loaded from NVS");
+    } else {
+        ESP_LOGI(TAG, "No WiFi credentials — OTA disabled until provisioned via CAN");
     }
 
-    sgp30_iaq_init();
+    discovery_init();
+    ota_init();
+    ESP_LOGI(TAG, "Hostname: %s", wifi_config_get_hostname());
+
+    // CAN runs in its own task before sensors so bus errors or I²C hangs
+    // never prevent CAN from operating.
+    ESP_ERROR_CHECK(can_common_init(CAN_TX_PIN, CAN_RX_PIN));
+    xTaskCreatePinnedToCore(twai_task, "twai", 4096, NULL, 5, NULL, 1);
+
+    // Sensors
+    if (sensors_init_i2c(I2C_SDA_PIN, I2C_SCL_PIN) != ESP_OK) {
+        ESP_LOGE(TAG, "I²C init failed");
+    }
+    scd41_start_periodic();
+    co_sen0466_set_active_mode();
+    sensors_init_mq6(MQ6_ADC_GPIO);
 
     ESP_LOGI(TAG, "=== Setup complete ===");
 
-    // Main loop: read sensors periodically.
-    // Each sensor is read independently — if one fails or is absent,
-    // the other's data still transmits (failed fields send as 0).
+    // Main loop: read sensors periodically, update shared values for CAN task.
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(SENSOR_READ_INTERVAL_MS));
 
-        // Read SHT31-D (temperature + humidity)
-        sht31_data_t sht = sht31_read();
-        float tempC = 0.0f;
-        float humidity = 0.0f;
+        scd41_data_t scd = scd41_read();
+        if (scd.valid) {
+            float tF = scd.temperature_c * 9.0f / 5.0f + 32.0f;
+            ESP_LOGI(TAG, "SCD41: %.1f°C / %.1f°F  RH %.1f%%  CO2 %u ppm",
+                     scd.temperature_c, tF, scd.humidity, scd.co2_ppm);
 
-        if (sht.valid) {
-            tempC = sht.temperature_c + (s_temp_offset_tenths / 10.0f);
-            humidity = sht.humidity;
-            float tempF = tempC * 9.0f / 5.0f + 32.0f;
-            ESP_LOGI(TAG, "SHT31: %.1fC / %.1fF, Humidity: %.1f%%", tempC, tempF, humidity);
-        } else {
-            ESP_LOGW(TAG, "SHT31: read failed");
+            s_temp_c_int = (int8_t)(scd.temperature_c + 0.5f);
+            s_temp_f_int = (int8_t)(tF + 0.5f);
+            s_humidity_scaled = (uint16_t)(scd.humidity * 100.0f);
+            s_co2_ppm = scd.co2_ppm;
         }
 
-        // Read SGP30 IAQ (TVOC + eCO2)
-        sgp30_data_t sgp = sgp30_measure();
-        uint16_t tvoc = 0;
-        uint16_t eco2 = 0;
-
-        if (sgp.iaq_valid) {
-            tvoc = sgp.tvoc;
-            eco2 = sgp.eco2;
-            ESP_LOGI(TAG, "SGP30: TVOC %d ppb (%s), eCO2 %d ppm (%s)",
-                     tvoc, tvoc_rating(tvoc), eco2, co2_level(eco2));
-
-            // Only attempt raw measurement if IAQ succeeded
-            sgp30_measure_raw(&sgp);
-            if (sgp.raw_valid) {
-                ESP_LOGD(TAG, "SGP30 Raw: H2 %d, Ethanol %d", sgp.raw_h2, sgp.raw_ethanol);
-            }
-        } else {
-            ESP_LOGW(TAG, "SGP30: IAQ read failed");
+        sgp40_data_t sgp = sgp40_measure(
+            scd.valid ? scd.humidity : -1.0f,
+            scd.valid ? scd.temperature_c : 25.0f);
+        if (sgp.valid) {
+            ESP_LOGI(TAG, "SGP40: VOC raw %u  index %u", sgp.voc_raw, sgp.voc_index);
+            s_voc_index = sgp.voc_index;
         }
 
-        // Humidity compensation for SGP30 (only if SHT31 data is available)
-        if (sht.valid) {
-            float absHumidity = 216.7f * (humidity / 100.0f) * 6.112f *
-                expf(17.62f * tempC / (243.12f + tempC)) / (273.15f + tempC);
-            uint16_t ah_scaled = (uint16_t)(absHumidity * 256.0f);
-            sgp30_set_humidity(ah_scaled);
+        if (scd.valid && sgp.valid) {
+            s_env_valid = true;
         }
 
-        // Always update shared data and transmit — zero for any failed sensor
-        s_temp_c_int = (int8_t)(tempC + 0.5f);
-        s_temp_f_int = (int8_t)(tempC * 9.0f / 5.0f + 32.0f + 0.5f);
-        s_humidity_scaled = (uint16_t)(humidity * 100.0f);
-        s_tvoc = tvoc;
-        s_eco2 = eco2;
-        s_sensor_valid = true;
+        co_data_t co = co_sen0466_read();
+        if (co.valid) {
+            ESP_LOGI(TAG, "CO:    %.1f ppm", co.ppm);
+            s_co_ppm = (uint16_t)(co.ppm + 0.5f);
+        }
+
+        mq6_data_t mq = mq6_read();
+        if (mq.valid) {
+            ESP_LOGI(TAG, "MQ-6:  V=%.2fV  Rs/R0=%.2f%s",
+                     mq.voltage, mq.rs_over_r0,
+                     mq.calibrated ? "" : " (uncalibrated)");
+            s_lpg_rs_r0_x1000 = mq.rs_over_r0_x1000;
+        }
+
+        if (co.valid || mq.valid) {
+            s_alarm_flags = compute_alarm_flags(s_co_ppm, s_lpg_rs_r0_x1000,
+                                                s_co2_ppm, s_voc_index);
+            s_safety_valid = true;
+        }
     }
 }

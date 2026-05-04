@@ -2,29 +2,38 @@
 
 ![TrailCurrent Borealis](DOCS/images/borealis_main.png)
 
-An ESP32-S3-based environmental sensor node that monitors temperature, humidity, TVOC, and eCO2, broadcasting readings over a CAN bus. Supports over-the-air (OTA) firmware updates, WiFi credential provisioning via CAN, and network discovery for integration with TrailCurrent Headwaters.
+Environmental and safety sensor node for toy haulers, RVs, and similar enclosed living spaces. Measures temperature, humidity, real CO2, VOC index, carbon monoxide, and propane / LPG levels, then broadcasts readings over a CAN bus. Supports over-the-air (OTA) firmware updates, WiFi credential provisioning via CAN, and network discovery for integration with TrailCurrent Headwaters.
 
 ## Hardware
 
-- **MCU:** [Waveshare ESP32-S3-Zero](https://www.waveshare.com/product/arduino/boards-kits/esp32-s3/esp32-s3-zero.htm) (4MB flash)
-- **Temperature/Humidity:** SHT31-D sensor (I2C)
-- **Air Quality:** SGP30 TVOC and eCO2 sensor (I2C)
-- **CAN Transceiver:** SN65HVD230DR (3.3V, 500 kbps)
-- **Status LED:** Onboard WS2812 RGB LED (GPIO 21)
+- **MCU board:** [Waveshare ESP32-S3-RS485-CAN](https://www.waveshare.com/esp32-s3-rs485-can.htm)
+  - ESP32-S3R8 (8MB PSRAM, external 16MB flash)
+  - Built-in isolated CAN transceiver (TJA1051) on GPIO15/16
+  - Built-in isolated RS485 transceiver (unused by Borealis)
+  - External PCF85063AT RTC
+  - 7-36V DC input or 5V USB-C
+- **CO2 / temp / humidity:** DFRobot SEN0536 (Sensirion SCD41, photoacoustic NDIR)
+- **VOC trending:** DFRobot SEN0394 (Sensirion SGP40, VOC Index 1-500)
+- **Carbon monoxide:** DFRobot SEN0466 (factory-calibrated electrochemical, 0-1000 ppm)
+- **Propane / LPG:** DFRobot SEN0131 (MQ-6 with adjustable potentiometer)
 
 ### Pin Assignments
 
-| Pin | GPIO | Function |
-|-----|-------|----------|
-| 8 | GPIO5 | I2C SDA (SGP30, SHT31-D) |
-| 9 | GPIO6 | I2C SCL (SGP30, SHT31-D) |
-| 10 | GPIO7 | CAN TX |
-| 11 | GPIO8 | CAN RX |
-| - | GPIO21 | Onboard RGB LED |
+| GPIO | Function |
+|------|----------|
+| 5 | I2C SDA (SCD41, SGP40, SEN0466) |
+| 6 | I2C SCL (SCD41, SGP40, SEN0466) |
+| 3 | MQ-6 analog input (ADC1_CH2, via 10k/15k divider) |
+| 15 | CAN TX (internal transceiver) |
+| 16 | CAN RX (internal transceiver) |
+
+See [`DOCS/sensor-wiring.md`](DOCS/sensor-wiring.md) for full wiring details and the [ribbon-cable diagram](DOCS/borealis-ribbon-cable.svg).
 
 ### Circuit Notes
 
 - KiCad schematic and PCB files are in the `EDA/` directory
+- The MQ-6 sensor's analog output swings 0-5V; a 10kΩ + 15kΩ resistor divider scales it to 0-3V at the ADC pin
+- Add a 100nF cap from the ADC pin to GND for noise filtering near the heater
 
 ## Building
 
@@ -55,53 +64,68 @@ curl -X POST http://<hostname>.local/ota --data-binary @build/borealis.bin
 
 ## Architecture
 
-The firmware is structured as a multi-file ESP-IDF project:
-
 | File | Purpose |
 |------|---------|
-| `main/main.c` | Sensor reading loop, TWAI task, LED control |
-| `main/sensors.c/h` | I2C drivers for SHT31-D and SGP30 |
-| `main/ota.c/h` | NVS WiFi credentials, OTA HTTP server, WiFi config CAN protocol |
+| `main/main.c` | Sensor reading loop, TWAI task, CAN frame transmission |
+| `main/sensors.c/h` | I²C drivers for SCD41, SGP40, SEN0466; ADC reading and Rs/R0 calculation for MQ-6 |
+| `main/wifi_config.c/h` | NVS-backed WiFi credentials and STA connect/disconnect |
+| `main/ota.c/h` | HTTP POST `/ota` server, runs in dedicated task |
 | `main/discovery.c/h` | mDNS-based network discovery for Headwaters registration |
 
 ### CAN Bus Task
 
 The TWAI (CAN) driver runs in a dedicated FreeRTOS task with alert-based message handling. It uses a dual-state transmission model:
 
-- **TX_ACTIVE** (33ms period): Normal operation when peers are detected on the bus
-- **TX_PROBING** (2000ms period): Slow probe when no peers are ACKing, reduces bus noise
+- **TX_ACTIVE** (1000 ms period): Normal operation when peers are detected on the bus
+- **TX_PROBING** (2000 ms period): Slow probe when no peers are ACKing, reduces bus noise
 
-The task automatically transitions between states based on TX success/failure and incoming messages. Bus-off recovery is handled via TWAI alerts.
+The task automatically transitions between states based on TX success/failure and incoming messages. Bus-off recovery is handled via TWAI alerts. This pattern is shared with all other TrailCurrent ESP-IDF modules — see `TrailCurrentReservoir`, `TrailCurrentSwitchback`, etc.
 
 ## CAN Bus Protocol
 
-All communication uses a 500 kbps CAN bus. The device transmits sensor data and receives OTA/WiFi/discovery commands.
+All communication uses a 500 kbps CAN bus. The device transmits sensor data and receives OTA / WiFi / discovery commands.
 
-### Sensor Data (TX)
+### Environmental Data (TX)
 
-**CAN ID:** `0x1F` | **DLC:** 8
+**CAN ID:** `0x1F` | **DLC:** 8 | **Period:** 1000 ms
 
 | Byte | Content |
 |------|---------|
-| 0 | Temperature (C, rounded integer) |
-| 1 | Temperature (F, rounded integer) |
-| 2-3 | Humidity (big-endian, value x 100) |
-| 4-5 | TVOC in ppb (big-endian) |
-| 6-7 | eCO2 in ppm (big-endian) |
+| 0 | Temperature (°C, signed int8, rounded) |
+| 1 | Temperature (°F, signed int8, rounded) |
+| 2-3 | Humidity (big-endian uint16, value × 100, e.g. 4523 = 45.23%) |
+| 4-5 | Real CO2 in ppm (big-endian uint16, NDIR measurement from SCD41) |
+| 6-7 | VOC Index (big-endian uint16, range 1-500, baseline ≈ 100) |
 
-Sensor data is transmitted every 33ms (when in TX_ACTIVE mode) with the most recent readings. The SGP30 receives humidity compensation from the SHT31-D for improved accuracy.
+### Safety Data (TX)
+
+**CAN ID:** `0x20` | **DLC:** 8 | **Period:** 1000 ms
+
+| Byte | Content |
+|------|---------|
+| 0-1 | CO concentration in ppm (big-endian uint16) |
+| 2-3 | LPG / propane Rs/R0 ratio × 1000 (big-endian uint16; lower = more gas) |
+| 4 | Alarm flags (bitmask) |
+| 5-7 | Reserved |
+
+Alarm flag bits:
+- `0x01` CO warning (≥ 70 ppm)
+- `0x02` CO alarm (≥ 200 ppm)
+- `0x04` LPG warning (Rs/R0 < 0.5)
+- `0x08` LPG alarm (Rs/R0 < 0.3)
+- `0x10` CO2 warning (≥ 1500 ppm)
+- `0x20` CO2 alarm (≥ 2500 ppm)
+- `0x40` VOC alarm (Index ≥ 400)
 
 ### OTA Trigger (RX)
 
 **CAN ID:** `0x00` | **DLC:** 3+
 
-Send the last 3 bytes of the target device's MAC address to trigger OTA mode on that specific device.
-
 | Byte | Content |
 |------|---------|
-| 0-2 | Target MAC bytes (e.g., `F2 7E 6C` for hostname `esp32-F27E6C`) |
+| 0-2 | Target MAC suffix (e.g., `F2 7E 6C` for hostname `esp32-F27E6C`) |
 
-When triggered, the device connects to its configured WiFi network, starts an HTTP server at `/ota`, and waits for a firmware upload for 3 minutes before returning to normal operation.
+When the MAC matches, the device connects to its configured WiFi network, starts an HTTP server at `/ota`, and waits for a firmware upload for 3 minutes before returning to normal operation.
 
 ### WiFi Configuration (RX)
 
@@ -136,7 +160,7 @@ Headwaters confirms registration by calling `GET /discovery/confirm`. The discov
 
 **CAN ID:** `0x04` | **DLC:** 6
 
-Sent once on boot after CAN initialization. Reports the running firmware version so Headwaters can track what each device is running (including after OTA updates).
+Sent once on boot after CAN initialization, then again whenever a peer is first detected. Reports the running firmware version so Headwaters can track what each device is running.
 
 | Byte | Content |
 |------|---------|
@@ -145,46 +169,57 @@ Sent once on boot after CAN initialization. Reports the running firmware version
 | 4 | Version minor |
 | 5 | Version patch |
 
-## Status LED
+## Air Quality and Safety Thresholds
 
-The onboard RGB LED indicates the device state:
+### Real CO2 (SCD41, NDIR)
 
-| Color | State |
+| ppm | Level |
+|-----|-------|
+| < 800 | Fresh / well-ventilated |
+| 800-1499 | Normal indoor |
+| 1500-2499 | Stuffy / drowsiness possible |
+| ≥ 2500 | Alarm |
+
+### VOC Index (SGP40)
+
+| Index | Meaning |
+|-------|---------|
+| 1-99 | Better than recent baseline |
+| 100 | Typical indoor air (24-hour running average) |
+| 101-249 | Worse than baseline |
+| 250-399 | Significant pollution event |
+| 400-500 | Severe pollution event |
+
+### Carbon Monoxide (SEN0466)
+
+| ppm | Level |
+|-----|-------|
+| < 35 | Normal |
+| 35-69 | Elevated |
+| 70-199 | Warning |
+| ≥ 200 | Alarm |
+
+### Propane / LPG (MQ-6, Rs/R0 ratio)
+
+| Rs/R0 | Level |
 |-------|-------|
-| Green | Normal operation |
-| Blue | OTA update mode (waiting for firmware upload) |
+| > 0.7 | Clean air |
+| 0.5-0.7 | Trace |
+| 0.3-0.5 | Warning |
+| < 0.3 | Alarm |
+
+The MQ-6 outputs a resistance ratio rather than ppm; calibrating to absolute ppm requires tank-test exposure. For leak detection the ratio is what matters: a sharp drop from baseline indicates propane present.
 
 ## OTA Updates
 
 1. Provision WiFi credentials via CAN (one-time setup, stored in NVS)
 2. Send an OTA trigger message on CAN ID `0x00` with the target device's MAC suffix
-3. The LED turns blue and the device connects to WiFi
+3. The device connects to WiFi
 4. Upload firmware via HTTP: `curl -X POST http://<hostname>.local/ota --data-binary @build/borealis.bin`
 5. On success, the device reboots with new firmware
 6. On timeout (3 minutes), the device disconnects WiFi and resumes normal operation
 
 The device hostname is printed to serial at boot (format: `esp32-XXYYZZ`).
-
-## Air Quality Levels
-
-### TVOC (Indoor Air Quality)
-
-| Range (ppb) | Rating |
-|-------------|--------|
-| < 65 | Excellent |
-| 65-219 | Good |
-| 220-659 | Moderate |
-| 660-2199 | Poor |
-| >= 2200 | Unhealthy |
-
-### eCO2
-
-| Range (ppm) | Level |
-|-------------|-------|
-| < 400 | Low (fresh air) |
-| 400-999 | Normal |
-| 1000-1999 | High |
-| >= 2000 | Alarm |
 
 ## License
 
