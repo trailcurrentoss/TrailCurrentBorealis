@@ -27,7 +27,7 @@ Environmental and safety sensor node for toy haulers, RVs, and similar enclosed 
 | 15 | CAN TX (internal transceiver) |
 | 16 | CAN RX (internal transceiver) |
 
-See [`DOCS/sensor-wiring.md`](DOCS/sensor-wiring.md) for full wiring details and the [ribbon-cable diagram](DOCS/borealis-ribbon-cable.svg).
+See [`DOCS/sensor-wiring.md`](DOCS/sensor-wiring.md) for full wiring details and the [ribbon-cable diagram](DOCS/borealis-ribbon-cable.svg). When the parts arrive, work through [`DOCS/arrival-todos.md`](DOCS/arrival-todos.md) for the assembly, calibration, and validation checklist.
 
 ### Circuit Notes
 
