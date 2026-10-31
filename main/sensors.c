@@ -148,7 +148,9 @@ esp_err_t sensors_init_i2c(int sda_pin, int scl_pin)
         ESP_LOGI(TAG, "SEN0466 CO sensor attached (0x%02X)", CO_SEN0466_ADDR);
     }
 
-    return ESP_OK;
+    // Non-fatal on individual device miss — any surviving sensor keeps
+    // contributing to its slice of the CAN broadcasts.
+    return (s_scd41_dev || s_sgp40_dev || s_co_dev) ? ESP_OK : ESP_ERR_NOT_FOUND;
 }
 
 // ---------------------------------------------------------------------------
@@ -336,7 +338,8 @@ static esp_err_t sen0466_send_cmd(uint8_t cmd_byte,
 esp_err_t co_sen0466_set_active_mode(void)
 {
     if (s_co_dev == NULL) return ESP_ERR_INVALID_STATE;
-    // 0x78: set mode; 0x03 = active (continuous), 0x04 = passive
+    // 0x78: set mode; 0x03 = active (continuous), 0x04 = passive.
+    // Matches Switchback's bench-validated driver.
     esp_err_t ret = sen0466_send_cmd(0x78, 0x03, 0x00, 0x00, 0x00, 0x00, NULL);
     if (ret == ESP_OK) {
         ESP_LOGI(TAG, "SEN0466 set to active acquisition mode");
@@ -346,19 +349,58 @@ esp_err_t co_sen0466_set_active_mode(void)
     return ret;
 }
 
+static float sen0466_read_temp_c(void)
+{
+    uint8_t resp[9];
+    if (sen0466_send_cmd(0x87, 0, 0, 0, 0, 0, resp) != ESP_OK) return -273.15f;
+    uint16_t adc = ((uint16_t)resp[2] << 8) | resp[3];
+    // Beta thermistor formula lifted from DFRobot_MultiGasSensor.
+    float Vpd3 = 3.0f * (float)adc / 1024.0f;
+    if (Vpd3 >= 3.0f) return -273.15f;
+    float Rth  = Vpd3 * 10000.0f / (3.0f - Vpd3);
+    float Tk   = 1.0f / (1.0f / (273.15f + 25.0f) + 1.0f / 3380.13f * logf(Rth / 10000.0f));
+    return Tk - 273.15f;
+}
+
+static float sen0466_read_cell_voltage(void)
+{
+    uint8_t resp[9];
+    if (sen0466_send_cmd(0x91, 0, 0, 0, 0, 0, resp) != ESP_OK) return -1.0f;
+    uint16_t adc = ((uint16_t)resp[2] << 8) | resp[3];
+    return (float)adc * 3.0f / 1024.0f * 2.0f;
+}
+
 co_data_t co_sen0466_read(void)
 {
     co_data_t out = { .valid = false };
     if (s_co_dev == NULL) return out;
 
+    // Diagnostic every 5th call so we can watch the electrochemical cell
+    // across exposures. Live cell = ~0.05-0.6 V; sits stable in clean air,
+    // rises when CO is present. Dead-zero voltage = the CO cell isn't
+    // polarized, sensor is DOA.
+    static int diag_counter = 0;
+    if ((diag_counter++ % 5) == 0) {
+        float v = sen0466_read_cell_voltage();
+        float t = sen0466_read_temp_c();
+        ESP_LOGI(TAG, "SEN0466 diagnostics: cell voltage=%.3f V, board temp=%.1f °C", v, t);
+    }
+
     uint8_t resp[9];
-    // 0x86: read concentration. Response[2..3] = high/low byte, units 0.1 ppm.
+    // 0x86: read concentration. See byte-layout comment below the log call.
     if (sen0466_send_cmd(0x86, 0x00, 0x00, 0x00, 0x00, 0x00, resp) != ESP_OK) {
         return out;
     }
-
+    ESP_LOGI(TAG, "SEN0466 raw resp: %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+             resp[0], resp[1], resp[2], resp[3], resp[4],
+             resp[5], resp[6], resp[7], resp[8]);
+    // Response layout: [FF][86][conc_hi][conc_lo][gas_type=0x04 for CO]
+    //                  [decimal_places][reserved][reserved][checksum].
+    // Verified live on Switchback bench (candle exposure): raw bytes moved
+    // 0x02→0x32 as CO rose, byte 4 stayed a constant 0x04 (gas-type ID),
+    // byte 5 was the varying decimal-places field.
     uint16_t raw = ((uint16_t)resp[2] << 8) | resp[3];
-    uint8_t  decimal_places = resp[4];
+    uint8_t  decimal_places = resp[5];
     float divisor = 1.0f;
     for (int i = 0; i < decimal_places; i++) divisor *= 10.0f;
     out.ppm = (float)raw / divisor;

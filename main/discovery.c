@@ -47,7 +47,35 @@ static void discovery_mdns_start(void)
 
     mdns_init();
     mdns_hostname_set(hostname);
-    mdns_instance_name_set("TrailCurrent Module");
+    /*
+     * Per-device DNS-SD names.
+     *
+     * A service instance name must be unique on the link -- it is the key the
+     * browser indexes the whole record under. Headwaters' host-side browser
+     * (local_code/discovery-mdns.py) takes the hostname from the SRV target
+     * and the module type from TXT and never reads the instance name, so
+     * making it unique costs nothing downstream.
+     *
+     * Every module used to advertise the bare literal "TrailCurrent
+     * Discovery". One press of Scan fires the CAN 0x02 trigger AND the
+     * wireless trigger together, so every module on the rig opens its mDNS
+     * window at the same moment, all claiming that one name. The mDNS
+     * component resolves it by having each loser rename itself to "...-2" and
+     * reprobe, but that is a multi-round multicast race inside a 30-second
+     * window, and a round that gets missed leaves two devices sharing a name
+     * -- at which point only one of them reaches Overlook's list.
+     *
+     * Appending the hostname makes the names unique by construction so none
+     * of that has to happen.
+     */
+    char mdns_instance[80];
+    char mdns_service_instance[80];
+    snprintf(mdns_instance, sizeof(mdns_instance),
+             "TrailCurrent Module %s", hostname);
+    snprintf(mdns_service_instance, sizeof(mdns_service_instance),
+             "TrailCurrent Discovery %s", hostname);
+
+    mdns_instance_name_set(mdns_instance);
 
     mdns_txt_item_t txt[] = {
         { "type",  MODULE_TYPE },
@@ -55,7 +83,7 @@ static void discovery_mdns_start(void)
         { "fw",    app->version },
     };
 
-    mdns_service_add("TrailCurrent Discovery", "_trailcurrent", "_tcp",
+    mdns_service_add(mdns_service_instance, "_trailcurrent", "_tcp",
                      80, txt, sizeof(txt) / sizeof(txt[0]));
 
     ESP_LOGI(TAG, "mDNS discovery: %s.local type=%s canid=%s fw=%s",

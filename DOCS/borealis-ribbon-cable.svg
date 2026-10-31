@@ -1,7 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 760" font-family="Inter, Helvetica, Arial, sans-serif">
   <defs>
-    <marker id="arr-down" markerWidth="6" markerHeight="8" refX="3" refY="8" orient="auto">
-      <path d="M0,0 L3,8 L6,0 Z" fill="#52a441"/>
+    <marker id="arr-grn" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#52a441"/>
+    </marker>
+    <marker id="arr-gry" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#868e96"/>
+    </marker>
+    <marker id="arr-red" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#e74c3c"/>
+    </marker>
+    <marker id="arr-teal" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#20c997"/>
     </marker>
   </defs>
 
@@ -29,7 +38,7 @@
   <text x="75" y="130" text-anchor="middle" font-size="12" fill="#fff" font-weight="700">1</text>
   <text x="75" y="148" text-anchor="middle" font-size="10" fill="#fff" font-weight="600">3.3V</text>
   <text x="75" y="165" text-anchor="middle" font-size="9" fill="#ffe5e3">Power</text>
-  <text x="75" y="300" text-anchor="middle" font-size="8" fill="#ffd5d5">RED STRIPE</text>
+  <text x="75" y="300" text-anchor="middle" font-size="8" fill="#ffd5d5">stripe</text>
 
   <!-- Pin 2: 5V (power) -->
   <rect x="102" y="108" width="46" height="204" fill="#52a441" stroke="#3d7d31" stroke-width="1" rx="2"/>
@@ -83,7 +92,7 @@
   <text x="475" y="130" text-anchor="middle" font-size="12" fill="#fff" font-weight="700">9</text>
   <text x="475" y="148" text-anchor="middle" font-size="10" fill="#fff" font-weight="600">IO3</text>
   <text x="475" y="165" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">MQ-6</text>
-  <text x="475" y="178" text-anchor="middle" font-size="9" fill="#ffe5d0">ADC1_CH2</text>
+  <text x="475" y="178" text-anchor="middle" font-size="8" fill="#ffe5d0">ADC1 CH2</text>
   <text x="475" y="300" text-anchor="middle" font-size="8" fill="#ffe5d0">Propane</text>
 
   <!-- Pin 10: IO14 — unused -->
@@ -110,7 +119,7 @@
   <text x="675" y="148" text-anchor="middle" font-size="10" fill="#fff" font-weight="600">IO5</text>
   <text x="675" y="165" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">I²C SDA</text>
   <text x="675" y="178" text-anchor="middle" font-size="8" fill="#cdf3e6">shared bus</text>
-  <text x="675" y="300" text-anchor="middle" font-size="8" fill="#cdf3e6">CO2/VOC/CO</text>
+  <text x="675" y="300" text-anchor="middle" font-size="8" fill="#cdf3e6">sensors</text>
 
   <!-- Pin 14: IO12 — unused -->
   <rect x="702" y="108" width="46" height="204" fill="#e9ecef" stroke="#ced4da" stroke-width="1" rx="2"/>
@@ -124,7 +133,7 @@
   <text x="775" y="148" text-anchor="middle" font-size="10" fill="#fff" font-weight="600">IO6</text>
   <text x="775" y="165" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">I²C SCL</text>
   <text x="775" y="178" text-anchor="middle" font-size="8" fill="#cdf3e6">shared bus</text>
-  <text x="775" y="300" text-anchor="middle" font-size="8" fill="#cdf3e6">CO2/VOC/CO</text>
+  <text x="775" y="300" text-anchor="middle" font-size="8" fill="#cdf3e6">sensors</text>
 
   <!-- Pin 16: IO11 — unused -->
   <rect x="802" y="108" width="46" height="204" fill="#e9ecef" stroke="#ced4da" stroke-width="1" rx="2"/>
@@ -157,23 +166,68 @@
   <text x="1025" y="165" text-anchor="middle" font-size="9" fill="#adb5bd">--</text>
 
   <!-- =============== ROUTING LINES TO SENSORS =============== -->
-  <!-- Pin 9 (MQ-6 ADC) routing -->
-  <line x1="475" y1="320" x2="475" y2="370" stroke="#fd7e14" stroke-width="2" marker-end="url(#arr-down)"/>
+  <!-- Power rails. White under-strokes let a rail pass over the lines it crosses without implying a connection. -->
+  <!-- Pin 2 (5V) → MQ-6 VCC only -->
+  <path d="M125,320 V362 H260 V377" fill="none" stroke="#52a441" stroke-width="2" marker-end="url(#arr-grn)"/>
+  <text x="162" y="375" text-anchor="middle" font-size="9" fill="#3d7d31" font-weight="600">5V (MQ-6 only)</text>
+
+  <!-- Pins 3/4 (GND) → MQ-6 and I²C sensors -->
+  <path d="M175,320 V348" fill="none" stroke="#868e96" stroke-width="2"/>
+  <path d="M225,320 V348" fill="none" stroke="#868e96" stroke-width="2"/>
+  <path d="M175,348 H620" fill="none" stroke="#ffffff" stroke-width="6"/>
+  <path d="M175,348 H620" fill="none" stroke="#868e96" stroke-width="2"/>
+  <path d="M310,348 V377" fill="none" stroke="#868e96" stroke-width="2" marker-end="url(#arr-gry)"/>
+  <path d="M620,348 V377" fill="none" stroke="#868e96" stroke-width="2" marker-end="url(#arr-gry)"/>
+  <circle cx="225" cy="348" r="3" fill="#868e96"/>
+  <circle cx="310" cy="348" r="3" fill="#868e96"/>
+
+  <!-- Pin 1 (3.3V) → SCD41 / SGP40 / SEN0466 VCC -->
+  <path d="M75,320 V334 H650" fill="none" stroke="#ffffff" stroke-width="6"/>
+  <path d="M75,320 V334 H650 V377" fill="none" stroke="#e74c3c" stroke-width="2" marker-end="url(#arr-red)"/>
+  <text x="560" y="330" text-anchor="middle" font-size="9" fill="#c0392b" font-weight="600">3.3V (I²C sensors)</text>
+
+  <!-- Pin 9 (MQ-6 ADC) routing: MQ-6 SIG (0-5V) → R1/R2 divider → IO3 (0-3.0V). Never wire SIG straight to IO3. -->
+  <path d="M475,320 V430" fill="none" stroke="#fd7e14" stroke-width="2"/>
+  <text x="481" y="392" font-size="9" fill="#d4640a" font-weight="600">to IO3, 0-3.0V max</text>
+
+  <!-- SIG from MQ-6 into R1 -->
+  <path d="M366,430 H400" fill="none" stroke="#fd7e14" stroke-width="2"/>
+  <text x="383" y="424" text-anchor="middle" font-size="9" fill="#d4640a" font-weight="600">0-5V</text>
+  <!-- R1 10k series -->
+  <rect x="400" y="424" width="46" height="12" fill="#ffffff" stroke="#212529" stroke-width="1.5"/>
+  <text x="423" y="418" text-anchor="middle" font-size="10" fill="#212529" font-weight="700">R1 10kΩ</text>
+  <path d="M446,430 H530" fill="none" stroke="#fd7e14" stroke-width="2"/>
+  <circle cx="475" cy="430" r="3.5" fill="#fd7e14"/>
+
+  <!-- R2 15k to GND -->
+  <path d="M475,430 V450" fill="none" stroke="#212529" stroke-width="1.5"/>
+  <rect x="469" y="450" width="12" height="40" fill="#ffffff" stroke="#212529" stroke-width="1.5"/>
+  <text x="487" y="468" font-size="10" fill="#212529" font-weight="700">R2</text>
+  <text x="487" y="481" font-size="10" fill="#212529" font-weight="700">15kΩ</text>
+  <path d="M475,490 V506 M465,506 H485 M468,510 H482 M471,514 H479" fill="none" stroke="#212529" stroke-width="1.5"/>
+
+  <!-- C1 100nF filter to GND (optional) -->
+  <path d="M530,430 V463 M520,463 H540 M520,469 H540 M530,469 V506 M520,506 H540 M523,510 H537 M526,514 H534" fill="none" stroke="#212529" stroke-width="1.5"/>
+  <text x="545" y="462" font-size="10" fill="#212529" font-weight="700">C1</text>
+  <text x="545" y="475" font-size="10" fill="#212529" font-weight="700">100nF</text>
+  <text x="545" y="487" font-size="9" fill="#868e96" font-style="italic">optional</text>
+
+  <text x="475" y="530" text-anchor="middle" font-size="9" fill="#d4640a" font-weight="600">Divider REQUIRED: 5V × 15/(10+15) = 3.0V at IO3</text>
 
   <!-- Pin 13 (SDA) and Pin 15 (SCL) — converge to I²C bus -->
-  <line x1="675" y1="320" x2="675" y2="370" stroke="#20c997" stroke-width="2" marker-end="url(#arr-down)"/>
-  <line x1="775" y1="320" x2="775" y2="370" stroke="#20c997" stroke-width="2" marker-end="url(#arr-down)"/>
+  <line x1="675" y1="320" x2="675" y2="377" stroke="#20c997" stroke-width="2" marker-end="url(#arr-teal)"/>
+  <line x1="775" y1="320" x2="775" y2="377" stroke="#20c997" stroke-width="2" marker-end="url(#arr-teal)"/>
 
   <!-- =============== SENSOR BLOCKS =============== -->
 
   <!-- MQ-6 block -->
-  <rect x="392" y="378" width="166" height="120" fill="#fff8f0" stroke="#fd7e14" stroke-width="1.5" rx="6"/>
-  <text x="475" y="400" text-anchor="middle" font-size="13" fill="#d4640a" font-weight="700">MQ-6 Propane</text>
-  <text x="475" y="416" text-anchor="middle" font-size="10" fill="#495057">DFRobot SEN0131</text>
-  <text x="402" y="438" font-size="10" fill="#495057">VCC → Pin 2 (5V)</text>
-  <text x="402" y="454" font-size="10" fill="#495057">GND → Pin 3 / 4</text>
-  <text x="402" y="470" font-size="10" fill="#495057">SIG → 10k+15k → IO3</text>
-  <text x="475" y="490" text-anchor="middle" font-size="9" fill="#868e96" font-style="italic">analog, ~150 mA heater</text>
+  <rect x="200" y="378" width="166" height="120" fill="#fff8f0" stroke="#fd7e14" stroke-width="1.5" rx="6"/>
+  <text x="283" y="400" text-anchor="middle" font-size="13" fill="#d4640a" font-weight="700">MQ-6 Propane</text>
+  <text x="283" y="416" text-anchor="middle" font-size="10" fill="#495057">DFRobot SEN0131</text>
+  <text x="210" y="438" font-size="10" fill="#495057">VCC → Pin 2 (5V)</text>
+  <text x="210" y="454" font-size="10" fill="#495057">GND → Pin 3 / 4</text>
+  <text x="210" y="470" font-size="10" fill="#495057">SIG → R1/R2 → Pin 9</text>
+  <text x="283" y="490" text-anchor="middle" font-size="9" fill="#868e96" font-style="italic">analog, ~150 mA heater</text>
 
   <!-- I²C bus shared block -->
   <rect x="600" y="378" width="240" height="120" fill="#f1faf6" stroke="#20c997" stroke-width="1.5" rx="6"/>
@@ -219,7 +273,7 @@
   <text x="670" y="648" font-size="10" fill="#495057">SCL → shared</text>
   <text x="670" y="672" font-size="10" fill="#c2410c" font-weight="600">Outputs:</text>
   <text x="680" y="688" font-size="10" fill="#495057">• CO concentration in ppm (0-1000)</text>
-  <text x="680" y="702" font-size="10" fill="#495057">• Active mode set at boot via 9-byte I²C frame</text>
+  <text x="680" y="702" font-size="10" fill="#495057">• Active mode set at boot</text>
   <text x="870" y="672" font-size="10" fill="#c2410c" font-weight="600">DIP switch:</text>
   <text x="880" y="688" font-size="10" fill="#495057">• default address 0x74</text>
   <text x="880" y="702" font-size="10" fill="#495057">• change DIP if conflicts</text>
